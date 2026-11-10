@@ -27,6 +27,9 @@ uv run uvicorn app.main:app --reload          # API on http://127.0.0.1:8000
 uv run celery -A app.worker worker -l info    # worker
 uv run celery -A app.worker beat -l info      # scheduled queues
 ```
+- The OpenAPI contract (`openapi.json` at the repo root) is generated from the
+  installed routes, so commit it and regenerate it with
+  `uv run python scripts/export_openapi.py` whenever a route changes.
 
 Docs are at `/docs`, the schema at `/openapi.json`, and the probes at
 `/api/v1/health/live` and `/api/v1/health/ready`.
