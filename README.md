@@ -72,7 +72,7 @@ app/
   services/              business logic
   utils/                 small helpers (cursors)
   templates/             email and document templates
-docs/                    design and API reference
+docs/                    design, API reference and issue tickets
 tests/
 ```
 
@@ -87,6 +87,8 @@ async def live() -> dict[str, LiveHealth]: ...
 
 ## Next
 
-Authentication, permissions and the tenant-config module are M1 in the plan;
+Work is broken into tickets in [docs/issues/](docs/issues/README.md), starting
+with M0 foundations and M1 tenancy and identity. Authentication, permissions and
+the tenant-config module are M1 in the plan;
 until then the request context carries a request ID but no tenant, and
 `TenantCollection` refuses to run.
