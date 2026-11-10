@@ -1,8 +1,10 @@
 # HMS Backend Implementation Plan and API Reference
 
-Prepared from Hospital Management System Requirements, Draft v0.1 (November 4, 2026). Scope: backend only (FastAPI, MongoDB, S3-compatible storage, Celery/Redis). Status: working draft, revision v0.3 (November 10, 2026). Sections 1 to 15 are the implementation plan; sections 16 to 28 are the API reference, the error code catalogue, the endpoint index and the revision history.
+Prepared from Hospital Management System Requirements, Draft v0.1 (November 4, 2026). Scope: backend only (FastAPI, MongoDB, S3-compatible storage, Celery/Redis). Status: working draft, revision v0.4 (November 10, 2026). Sections 1 to 15 are the implementation plan; sections 16 to 28 are the API reference, the error code catalogue, the endpoint index and the revision history.
 
 **How to read this revision.** Decisions taken while reviewing the draft are marked **Decision (proposed)** in section 2. Each carries a default so implementation can start, and each names the alternative that was rejected. Corrections that follow from those decisions are applied throughout the document instead of being listed separately. The four-key response envelope of section 16 is unchanged, and every endpoint keeps it.
+
+**Revision v0.4 changes how the code is organised, not the design.** Routes, request and response bodies, stored documents, business logic and data access now sit side by side in `api/v1/routes/`, `schemas/`, `models/`, `services/` and `db/` instead of one package per module. Cross-cutting code moves to `core/` (config, context, logging, errors, middleware) and the entry points become `app/main.py` and `app/worker.py`. Sections 3.2 and 3.3 describe the layout; nothing in sections 4 to 27 depends on it.
 
 **Revision v0.3 changes the stack, not the design.** The plan is now written for FastAPI on Python instead of NestJS on TypeScript: Pydantic replaces `class-validator` and `zod`, Motor replaces Mongoose, Celery replaces BullMQ, and Python runs both processes. Tenancy, authentication, the data model, the endpoints and the delivery sequence are unchanged. The one knock-on effect is that field names are snake\_case in the database as well as on the wire, so the camelCase-to-snake\_case transformation layer disappears (§6.1, §7.1, §16.6, §28).
 
@@ -52,7 +54,7 @@ These affect schema or API design, so they should be decided before the matching
 These were internal inconsistencies rather than open questions, so they are settled:
 
 - `Role.mfa_required` is the single source of truth for MFA enforcement; `tenant_config.security.mfa_required_role_keys` is removed. Two writable copies of a security policy is a bug waiting to happen.
-- Permissions `visit:update` and `visit:close` are added, because `PATCH /visits/:id` and `POST /visits/:id/close` had no permission. The catalogue is code-owned (`app/common/permissions.py`) and a test fails when a route declares a permission that is not in it.
+- Permissions `visit:update` and `visit:close` are added, because `PATCH /visits/:id` and `POST /visits/:id/close` had no permission. The catalogue is code-owned (`app/core/permissions.py`) and a test fails when a route declares a permission that is not in it.
 - `GET /users/directory` is added for care-team and attending-clinician pickers. `GET /users` requires `user:manage`, which Doctors and Records Clerks do not hold, so neither picker could be built.
 - Fields referenced by prose or by responses but missing from the schema are added: `patients.legacy_number`, `patients.clinician_ids`, `ClinicalEntry.content_text`, `ExtractionJob.result.raw_output`, `ExtractionJob.warnings`, `ExtractionJob.draft`, `fields[].requires_confirmation`, `documents.pages[].processing_status`, `documents.request_hash`.
 - `enhancement_failed` is replaced by `pages[].processing_status: 'enhancement_failed'`; `documents.extraction.status` gains `processing` and `cancelled`; `refresh_token_hash` leaves `sessions` for `refresh_tokens`.
@@ -78,28 +80,33 @@ These were internal inconsistencies rather than open questions, so they are sett
 
 ```
 app/
-  main_api.py            # FastAPI app and uvicorn bootstrap
-  main_worker.py         # Celery app bootstrap (celery -A app.main_worker worker)
-  common/
+  main.py                # FastAPI app and uvicorn bootstrap (uvicorn app.main:app)
+  worker.py              # Celery app bootstrap (celery -A app.worker worker)
+  api/
+    routing.py           # the router that applies the response envelope
+    deps.py              # get_current_user, require_mfa, require_permission, require_feature, resources
+    v1/
+      router.py          # mounts every route module under /api/v1
+      routes/            # one module per resource: auth.py, patients.py, visits.py, ...
+  core/
+    config.py            # pydantic-settings env schema, typed config
     context.py           # contextvars tenant/user context, set by middleware and by tasks
-    database/            # tenant collection guard, base repository, client registry, outbox dispatcher
-    deps/                # get_current_user, require_mfa, require_permission, require_feature
-    middleware/          # audit, response envelope, idempotency, security headers
     errors.py            # exception handlers that emit the envelope
-    schemas/ utils/      # shared Pydantic models, helpers
-  config/                # pydantic-settings env schema, typed config
-  modules/
-    auth/ identities/ users/ roles/ tenants/ tenant_config/
-    patients/ visits/ vitals/ clinical_entries/ prescriptions/
-    documents/ storage/ image_processing/
-    extraction/ ai_providers/
-    search/ audit/ access_control/ notifications/
-    exports/ imports/ metering/ platform/ platform_audit/ health/
-    # every module package contains:
-    #   router.py      APIRouter, one file (or a routers/ package) per resource
-    #   schemas.py     request/response Pydantic models
-    #   service.py     business logic
-    #   repository.py  collection access, always through TenantCollection
+    logging.py           # JSON logs carrying request ID and tenant ID
+    middleware.py        # audit, response envelope, idempotency, security headers
+    permissions.py       # the code-owned permission catalogue
+  db/
+    tenancy.py           # tenant collection guard, document base, system context
+    repository.py        # base repository primitives
+    client.py            # connection registry (one shared database in Release 1)
+    cache.py             # Redis client factory
+    outbox.py            # outbox dispatcher
+  models/                # stored document models, the MongoDB shapes
+  schemas/               # request and response Pydantic models
+  services/              # business logic, including policy, audit, storage, extraction
+  utils/                 # cursors and other dependency-free helpers
+  templates/             # email and document templates
+docs/                    # this plan and the API reference
 migrations/              # versioned MongoDB migration scripts
 tests/
   isolation/             # cross-tenant test suite
@@ -126,11 +133,11 @@ tests/
 | notifications | Email delivery, in-app notifications, and SSE event fan-out |
 | platform, platform_audit | Platform admin API (separate auth realm) and the platform audit trail |
 
-Each module is a Python package with the same four files (`router.py`, `schemas.py`, `service.py`, `repository.py`), so a module is a plain directory that nothing has to register. Cross-module calls go through the service, never through another module's repository.
+A module is a slice across layers, not a directory: its routes live in `api/v1/routes/<module>.py` (or a `routes/<module>/` package when the module serves several resources), its response and request bodies in `schemas/<module>.py`, its query models in `models/<module>.py`, its business logic in `services/<module>.py`, and its collection access in `db/<module>_repository.py` over a `TenantCollection`. Nothing has to be registered by hand: a route module exports a `router` that `api/v1/router.py` includes. Cross-module calls go through the service, never through another module's repository.
 
 ### 3.4 Request pipeline
 
-Starlette middleware (security headers, CORS, request ID) and rate limiting run first, then the authentication dependency (verifies the JWT and session and populates the context), the MFA-satisfied dependency, the permission dependency, Pydantic request validation, the router function, the service, and the tenant-scoped repository on the way in. The response then passes back out through the same layer: the envelope wrapper adds `status`, `status_code` and `message`, and the audit dependency records the event from route metadata. Both live once in `app/common/`, not in each route. Errors go through exception handlers that return the same four-key envelope as successful calls (with status set to error) and never leak internals or patient data.
+Starlette middleware (security headers, CORS, request ID) and rate limiting run first, then the authentication dependency (verifies the JWT and session and populates the context), the MFA-satisfied dependency, the permission dependency, Pydantic request validation, the router function, the service, and the tenant-scoped repository on the way in. The response then passes back out through the same layer: the envelope wrapper adds `status`, `status_code` and `message`, and the audit dependency records the event from route metadata. Both live once in `app/api/` and `app/core/`, not in each route. Errors go through exception handlers that return the same four-key envelope as successful calls (with status set to error) and never leak internals or patient data.
 
 ## 4. Multi-Tenancy Implementation
 
@@ -147,8 +154,8 @@ PyMongo has no schema middleware, so tenancy is enforced at the one place that c
 - On `aggregate`: prepends a `$match` on `tenant_id`. Pipelines whose first stage must be special (`$search`, `$geoNear`) get the filter inside that stage, and a unit test guards this.
 - On `insert_one` and `insert_many`: stamps `tenant_id` from context and refuses a document that already carries a different one.
 - Raises if there is no context, unless the call runs inside `run_as_system(reason, fn)`, which is logged and reserved for migrations and platform tasks.
-- Collections exempt from the guard are limited to `identities`, `platform_users`, `tenants` and `platform_audit_logs`. The exemption list lives in `app/common/database/` and the isolation suite asserts it (§4.6).
-- An `import-linter` contract forbids importing `pymongo` or `motor` outside `app/common/database/`, so the guard cannot be bypassed by grabbing a collection directly.
+- Collections exempt from the guard are limited to `identities`, `platform_users`, `tenants` and `platform_audit_logs`. The exemption list lives in `app/db/` and the isolation suite asserts it (§4.6).
+- An `import-linter` contract forbids importing `pymongo` or `motor` outside `app/db/`, so the guard cannot be bypassed by grabbing a collection directly.
 
 ### 4.3 Base repository
 
@@ -196,7 +203,7 @@ One `tenant_configs` document per tenant, validated by a Pydantic model with def
 
 Permissions are strings in `resource:action` form. Roles store a set of permissions. A router declares its permission as a dependency, `Depends(require_permission('clinical:write'))`, which registers the permission in the route table used by the tests and by `GET /permissions`. Role changes bump a per-user `perm_version`, which invalidates cached permission sets.
 
-The catalogue is code-owned in `app/common/permissions.py`, seeded at tenant creation, exposed by `GET /permissions`, and checked by a test that walks the FastAPI route table and the dependency closure of each route: a route that declares a permission missing from the catalogue fails the build, as does a catalogue entry no route or policy uses. When a role changes, the tenant module bumps `perm_version` for every user holding it in one update, which invalidates their cached permission sets.
+The catalogue is code-owned in `app/core/permissions.py`, seeded at tenant creation, exposed by `GET /permissions`, and checked by a test that walks the FastAPI route table and the dependency closure of each route: a route that declares a permission missing from the catalogue fails the build, as does a catalogue entry no route or policy uses. When a role changes, the tenant module bumps `perm_version` for every user holding it in one update, which invalidates their cached permission sets.
 
 | Permission | Meaning |
 | :-- | :-- |
@@ -612,14 +619,14 @@ class ExtractionProvider(Protocol):
     async def extract(
         self,
         *,
-        images: list[ImageInput],      # original or enhanced, per config
-        schema: dict[str, Any],        # target JSON Schema
+        images: list[ImageInput],  # original or enhanced, per config
+        schema: dict[str, Any],  # target JSON Schema
         prompt_version: str,
-        options: ExtractOptions,       # model, timeout_ms
-    ) -> ExtractionResult: ...         # raw_json, transcription, usage
+        options: ExtractOptions,  # model, timeout_ms
+    ) -> ExtractionResult: ...  # raw_json, transcription, usage
 ```
 
-`ImageInput`, `ExtractOptions` and `ExtractionResult` are Pydantic models in `app/modules/extraction/providers/base.py`; the protocol is what adapters implement, so no adapter can leak a provider SDK type into the rest of the service.
+`ImageInput`, `ExtractOptions` and `ExtractionResult` are Pydantic models in `app/services/extraction/providers/base.py`; the protocol is what adapters implement, so no adapter can leak a provider SDK type into the rest of the service.
 
 Adapters are registered by name (for example `anthropic`, `openai`, `google`). The tenant config selects provider and model, and a platform-level default and fallback exist. Provider API keys live in the secret manager, never in tenant config. Each adapter is contract-tested against recorded fixtures.
 
@@ -858,18 +865,21 @@ List endpoints accept `limit` (default 25, maximum 100) and `cursor` (opaque, ta
 - The storage models in section 6 are snake\_case, and so are the Pydantic models that serialize them, so a field keeps one name from MongoDB to the response body. There is no key-transform layer and no field-name map to maintain.
 
 ```py
-Id = str                        # 24-character hex ObjectId
-Timestamp = str                 # '2026-11-09T09:30:00Z'
-DateOnly = str                  # 'YYYY-MM-DD'
+Id = str  # 24-character hex ObjectId
+Timestamp = str  # '2026-11-09T09:30:00Z'
+DateOnly = str  # 'YYYY-MM-DD'
+
 
 class Name(TypedDict):
     given: list[str]
     family: str
     other: NotRequired[str]
 
+
 class Phone(TypedDict):
     value: str
-    is_primary: NotRequired[bool]   # responses add `normalized` (E.164)
+    is_primary: NotRequired[bool]  # responses add `normalized` (E.164)
+
 
 class Address(TypedDict):
     line1: str
@@ -879,12 +889,14 @@ class Address(TypedDict):
     country: str
     lga: NotRequired[str]
 
-class UserRef(TypedDict):       # lightweight reference
+
+class UserRef(TypedDict):  # lightweight reference
     _id: Id
     name: str
     role: NotRequired[str]
 
-Sex = Literal['male', 'female', 'other', 'unknown']
+
+Sex = Literal["male", "female", "other", "unknown"]
 ```
 
 ## 17. Authentication and Sessions
@@ -2830,6 +2842,7 @@ Every route in sections 17 to 25, with the permission it requires. `care-team` m
 | v0.1 | 2026-11-04 | First draft: requirements turned into architecture, schemas, endpoints and a delivery plan. |
 | v0.2 | 2026-11-09 | Review pass. Six schema decisions recorded in §2 items 11 to 16 (identity/membership split, refresh-token history, asynchronous audit chain, atomic version allocation, merge records, denormalized patient fields). Corrections in §2.1. Data model updated in §6 and its index plan. New endpoints: `PATCH /auth/me`, MFA disable and recovery codes, `/users/directory`, `/users/invitations` (list), `/users/:id/signature`, `POST /documents/:id/pages`, `GET /patients/:id/clinical-entries`, `GET /patients/:id/prescriptions`, `GET /prescriptions/:id`, `POST /prescriptions/:id/mark-error`, `POST /extractions/:id/cancel`, `POST /events/ticket`, `GET /imports`, `GET /imports/:id/errors`, `GET /exports`, `GET /platform/audit-logs`. Sections 26 and 27, promised since v0.1 but missing, are written. |
 | v0.3 | 2026-11-10 | Framework change: FastAPI on Python replaces NestJS on TypeScript. Updated: §1 stack table, §3 runtime components and repository layout, §3.4 request pipeline, §4.1–§4.4 tenancy plumbing, §5 permission and audit plumbing, §8 Celery, §9 Pillow/OpenCV, §10.1 provider protocol, §12 cross-cutting concerns, §13–§14 tooling and CI, §15.1 risk mitigation. Pydantic now covers HTTP input, LLM output and tenant config (§1, §10.2, §12), so `class-validator` and zod are gone. Field names in §6 are snake\_case throughout, matching the wire format, so the camelCase mapping layer and `common/dto/field-names.ts` are gone (§6.1, §7.1, §16.6). Tenancy, security, schema shape, endpoints and the delivery sequence are unchanged. |
+| v0.4 | 2026-11-10 | Layout change: one layer per directory (`api/`, `core/`, `db/`, `models/`, `schemas/`, `services/`, `utils/`, `templates/`) instead of one package per module, with entry points `app/main.py` and `app/worker.py`. Updated: §3.2 repository layout, §3.3 module responsibilities, §3.4 pipeline, §4.2, §5.1 and §10.1 path references. Behaviour, schemas and endpoints are unchanged. |
 
 ### 28.1 Deferred to Release 2 or later
 
