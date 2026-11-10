@@ -1,0 +1,96 @@
+[project]
+name = "hms-be"
+version = "0.1.0"
+description = "HMS backend: FastAPI modular monolith (API and Celery worker) on MongoDB."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "celery[redis]>=5.7.0",
+    "fastapi>=0.162.2",
+    "motor>=3.7.1",
+    "pydantic>=2.14.3",
+    "pydantic-settings>=2.16.2",
+    "redis>=8.1.0",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "asgi-lifespan>=2.1.0",
+    "httpx>=0.28.1",
+    "import-linter>=2.16",
+    "mypy>=2.4.1",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1.post1",
+    "ruff>=0.17.4",
+]
+
+# Application, not a distributable package: `app/` is imported from the tree.
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",     # pycodestyle, pyflakes
+    "I", "UP",         # isort, pyupgrade
+    "B", "C4", "SIM",  # bugbear, comprehensions, simplify
+    "N",               # pep8-naming
+    "RUF",             # ruff-specific
+    "ASYNC",           # async footguns
+    "S",               # bandit security rules
+    "PT",              # pytest style
+    "TID",             # tidy imports
+]
+# Depends() and friends in argument defaults are the FastAPI idiom.
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["app", "tests"]
+plugins = ["pydantic.mypy"]
+warn_unreachable = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["celery.*", "kombu.*", "motor.*", "pymongo.*", "bson.*", "redis.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["."]
+
+[tool.importlinter]
+root_package = "app"
+include_external_packages = true
+
+# Tenancy is enforced by the collection guard, so the driver may only be
+# imported inside app/db/. See section 4.2 of the plan.
+[[tool.importlinter.contracts]]
+name = "Database drivers stay inside the guard"
+type = "forbidden"
+source_modules = [
+    "app.api",
+    "app.services",
+    "app.core",
+    "app.schemas",
+    "app.models",
+    "app.utils",
+]
+forbidden_modules = ["motor", "pymongo", "bson"]
+# Modules may name the registry type; only a direct driver import is the offence.
+allow_indirect_imports = true
