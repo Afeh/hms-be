@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "hms-be"
 version = "0.1.0"
@@ -14,6 +18,10 @@ dependencies = [
     "uvicorn[standard]>=0.54.0",
 ]
 
+[project.scripts]
+# Versioned migrations: `uv run mgm new <name>` and `uv run mgm migrate`.
+mgm = "migrations.cli:main"
+
 [dependency-groups]
 dev = [
     "asgi-lifespan>=2.1.0",
@@ -25,14 +33,13 @@ dev = [
     "ruff>=0.17.4",
 ]
 
-# Application, not a distributable package: `app/` is imported from the tree.
-[tool.uv]
-package = false
+[tool.hatch.build.targets.wheel]
+packages = ["app", "migrations"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["app", "tests"]
+src = ["app", "tests", "migrations"]
 
 [tool.ruff.lint]
 select = [
@@ -58,7 +65,7 @@ known-first-party = ["app", "tests"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["app", "tests"]
+files = ["app", "tests", "migrations"]
 plugins = ["pydantic.mypy"]
 warn_unreachable = true
 warn_unused_ignores = true
@@ -73,6 +80,9 @@ asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 addopts = "-q"
 pythonpath = ["."]
+markers = [
+    "integration: needs a running MongoDB (and Redis where applicable)",
+]
 
 [tool.importlinter]
 root_package = "app"
