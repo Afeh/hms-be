@@ -69,7 +69,11 @@ class TenantDocument(BaseModel):
     id: str | None = Field(default=None, alias="_id")
     tenant_id: str
     created_at: datetime | None = None
+    created_by: str | None = None
     updated_at: datetime | None = None
+    updated_by: str | None = None
+    deleted_at: datetime | None = None
+    deleted_by: str | None = None
     version: int = 1
 
     @field_validator("id", mode="before")
