@@ -25,6 +25,7 @@ _HTTP_CODES: dict[int, str] = {
     404: "not_found",
     405: "method_not_allowed",
     409: "conflict",
+    412: "version_mismatch",
     413: "payload_too_large",
     415: "unsupported_media_type",
     422: "validation_failed",
@@ -32,6 +33,19 @@ _HTTP_CODES: dict[int, str] = {
     500: "internal_error",
     503: "dependency_unavailable",
 }
+
+
+class VersionConflictError(Exception):
+    """A versioned update matched no document: missing, deleted or stale."""
+
+    def __init__(self, entity_id: str, expected_version: int) -> None:
+        super().__init__(f"no document {entity_id!r} at version {expected_version}")
+        self.entity_id = entity_id
+        self.expected_version = expected_version
+
+
+class DuplicateEntityError(Exception):
+    """A unique index rejected the write."""
 
 
 class ApiError(Exception):
@@ -72,6 +86,22 @@ async def api_error_handler(request: Request, exc: Exception) -> Response:
     if not isinstance(exc, ApiError):
         return _render(ApiError(500, "internal_error", "Something went wrong"))
     return _render(exc)
+
+
+async def version_conflict_handler(request: Request, exc: Exception) -> Response:
+    del request, exc  # the stale version is not echoed back
+    return _render(
+        ApiError(
+            412,
+            "version_mismatch",
+            "The resource changed since it was read; fetch it again",
+        )
+    )
+
+
+async def duplicate_entity_handler(request: Request, exc: Exception) -> Response:
+    del request, exc  # driver detail may include the index name, so keep it out
+    return _render(ApiError(409, "conflict", "The resource already exists"))
 
 
 async def validation_error_handler(request: Request, exc: Exception) -> Response:
@@ -121,6 +151,8 @@ async def unhandled_error_handler(request: Request, exc: Exception) -> Response:
 
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ApiError, api_error_handler)
+    app.add_exception_handler(VersionConflictError, version_conflict_handler)
+    app.add_exception_handler(DuplicateEntityError, duplicate_entity_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(StarletteHTTPException, http_error_handler)
     app.add_exception_handler(Exception, unhandled_error_handler)
