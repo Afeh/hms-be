@@ -20,7 +20,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
-        enable_decoding=False,    
+        enable_decoding=False,
     )
 
     app_name: str = "HMS API"
