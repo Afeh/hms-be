@@ -27,9 +27,9 @@ yet; they come after M1 publishes its OpenAPI contract.
 | # | Ticket | Milestone | Depends on | Status |
 | :-- | :-- | :-- | :-- | :-- |
 | 0001 | [CI pipeline](0001-ci-pipeline.md) | M0 | — | Completed |
-| 0002 | [Local infrastructure](0002-local-infrastructure.md) | M0 | — | Open |
-| 0003 | [Migrations and indexes](0003-migrations-and-indexes.md) | M0 | 0002 | Open |
-| 0004 | [Repository primitives](0004-repository-primitives.md) | M0 | 0002 | Open |
+| 0002 | [Local infrastructure](0002-local-infrastructure.md) | M0 | — | Completed |
+| 0003 | [Migrations and indexes](0003-migrations-and-indexes.md) | M0 | 0002 | Completed |
+| 0004 | [Repository primitives](0004-repository-primitives.md) | M0 | 0002 | Completed |
 | 0005 | [Transactional outbox](0005-transactional-outbox.md) | M0 | 0002, 0003 | Open |
 | 0006 | [HTTP hardening and rate limits](0006-http-hardening.md) | M0 | — | Open |
 | 0010 | [Tenant records and seeding](0010-tenant-records-and-seeding.md) | M1 | 0003, 0004 | Open |
