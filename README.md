@@ -34,6 +34,22 @@ uv run celery -A app.worker beat -l info      # scheduled queues
 Docs are at `/docs`, the schema at `/openapi.json`, and the probes at
 `/api/v1/health/live` and `/api/v1/health/ready`.
 
+## Migrations
+
+Migrations are versioned, forward-only Python scripts in `migrations/`, applied by
+the `mgm` runner against the database in `Settings`: no second env file, no
+at-startup index build.
+
+```bash
+uv run mgm new add_patient_indexes    # creates migrations/0002_add_patient_indexes.py
+uv run mgm migrate                    # applies every pending revision
+```
+
+A schema change ships as a migration plus the matching Pydantic model change in
+the same pull request; a wrong migration is corrected by a new revision, not a
+rollback. Every migration runs inside `run_as_system`, and the applied revision
+and reason are logged and stored in the `_migrations` collection.
+
 ## Checks
 
 ```bash
@@ -42,6 +58,7 @@ uv run ruff check .
 uv run mypy
 uv run lint-imports
 uv run pytest
+MONGODB_URI=mongodb://127.0.0.1:27017 uv run pytest -m integration
 ```
 
 `lint-imports` enforces that nothing outside `app/db/` imports the MongoDB driver:
