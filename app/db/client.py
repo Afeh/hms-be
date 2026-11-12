@@ -36,6 +36,10 @@ class TenantConnectionRegistry:
     def collection(self, tenant_id: str, name: str) -> TenantCollection:
         return TenantCollection(self.database_for(tenant_id)[name], name)
 
+    def system_collection(self, name: str) -> TenantCollection:
+        """Access a collection for platform tasks and migrations outside a tenant scope."""
+        return TenantCollection(self._client[self._database_name][name], name)
+
     async def ping(self) -> None:
         await self._client.admin.command("ping")
 
