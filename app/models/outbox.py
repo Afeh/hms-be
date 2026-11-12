@@ -1,5 +1,5 @@
 """The stored shape of one outbox row: a side effect owed after a commit.
- 
+
 A row is written in the same transaction as the state change that needs it (plan
 section 12, "Transactional outbox"), so a request that fails to commit leaves no
 pending email and no queued job behind. Nothing here queries MongoDB; the access
@@ -18,7 +18,7 @@ from app.db.tenancy import TenantDocument
 
 class OutboxEvent(TenantDocument):
     """One side effect, waiting for the transaction that produced it to commit."""
- 
+
     type: str
     payload: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(UTC))
