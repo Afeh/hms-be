@@ -25,6 +25,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pymongo.results import DeleteResult, InsertManyResult, InsertOneResult, UpdateResult
 
 from app.core.context import MissingContextError, get_context
+from app.core.errors import QuerySanitizationError
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,28 @@ _system_reason: ContextVar[str | None] = ContextVar("system_access_reason", defa
 
 class TenantIsolationError(RuntimeError):
     """Raised when a caller tries to read or write another tenant's documents."""
+
+
+def sanitize_query(query: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Reject $-prefixed keys and dotted keys to prevent operator injection."""
+    if not query:
+        return {}
+
+    def _check_mapping(mapping: Mapping[str, Any]) -> None:
+        for k, v in mapping.items():
+            if k.startswith("$") or "." in k:
+                raise QuerySanitizationError(k)
+            _check_value(v)
+
+    def _check_value(val: Any) -> None:
+        if isinstance(val, Mapping):
+            _check_mapping(val)
+        elif isinstance(val, (list, tuple, set)):
+            for item in val:
+                _check_value(item)
+
+    _check_mapping(query)
+    return dict(query)
 
 
 @contextlib.contextmanager
@@ -95,6 +118,10 @@ class TenantCollection:
     def name(self) -> str:
         return self._name
 
+    def sanitize(self, query: Mapping[str, Any] | None) -> dict[str, Any]:
+        """Sanitize a query from untrusted input before driver evaluation."""
+        return sanitize_query(query)
+
     # Reads -----------------------------------------------------------------
 
     def find(
@@ -105,8 +132,11 @@ class TenantCollection:
         sort: Sequence[tuple[str, int]] | None = None,
         limit: int = 0,
         skip: int = 0,
+        sanitize: bool = False,
         **kwargs: Any,
     ) -> AsyncIOMotorCursor[dict[str, Any]]:
+        if sanitize and filter:
+            sanitize_query(filter)
         cursor = self._collection.find(self._scoped(filter), projection, **kwargs)
         if sort:
             cursor = cursor.sort(list(sort))
@@ -121,13 +151,22 @@ class TenantCollection:
         filter: Mapping[str, Any] | None = None,
         *,
         projection: Mapping[str, Any] | None = None,
+        sanitize: bool = False,
         **kwargs: Any,
     ) -> dict[str, Any] | None:
+        if sanitize and filter:
+            sanitize_query(filter)
         return await self._collection.find_one(self._scoped(filter), projection, **kwargs)
 
     async def count_documents(
-        self, filter: Mapping[str, Any] | None = None, **kwargs: Any
+        self,
+        filter: Mapping[str, Any] | None = None,
+        *,
+        sanitize: bool = False,
+        **kwargs: Any,
     ) -> int:
+        if sanitize and filter:
+            sanitize_query(filter)
         return await self._collection.count_documents(self._scoped(filter), **kwargs)
 
     def aggregate(
@@ -137,9 +176,7 @@ class TenantCollection:
 
     # Writes ----------------------------------------------------------------
 
-    async def insert_one(
-        self, document: Mapping[str, Any], **kwargs: Any
-    ) -> InsertOneResult:
+    async def insert_one(self, document: Mapping[str, Any], **kwargs: Any) -> InsertOneResult:
         return await self._collection.insert_one(self._stamped(document), **kwargs)
 
     async def insert_many(

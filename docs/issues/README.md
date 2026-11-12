@@ -31,7 +31,7 @@ yet; they come after M1 publishes its OpenAPI contract.
 | 0003 | [Migrations and indexes](0003-migrations-and-indexes.md) | M0 | 0002 | Completed |
 | 0004 | [Repository primitives](0004-repository-primitives.md) | M0 | 0002 | Completed |
 | 0005 | [Transactional outbox](0005-transactional-outbox.md) | M0 | 0002, 0003 | Completed |
-| 0006 | [HTTP hardening and rate limits](0006-http-hardening.md) | M0 | — | Open |
+| 0006 | [HTTP hardening and rate limits](0006-http-hardening.md) | M0 | — | Completed |
 | 0010 | [Tenant records and seeding](0010-tenant-records-and-seeding.md) | M1 | 0003, 0004 | Open |
 | 0011 | [Tenant configuration](0011-tenant-configuration.md) | M1 | 0010 | Open |
 | 0012 | [Identity and access models](0012-identity-and-access-models.md) | M1 | 0003, 0004, 0010 | Open |

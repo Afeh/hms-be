@@ -87,4 +87,3 @@ def sweep_outbox(*args: Any, **kwargs: Any) -> list[str]:
     for tenant_id in tenant_ids:
         dispatch_outbox.delay(context={"tenant_id": tenant_id})
     return tenant_ids
-

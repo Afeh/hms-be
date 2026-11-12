@@ -1,6 +1,6 @@
 """Data access: this package is the only importer of the MongoDB driver."""
 
-from app.core.errors import DuplicateEntityError, VersionConflictError
+from app.core.errors import DuplicateEntityError, QuerySanitizationError, VersionConflictError
 from app.db.cache import create_redis, tenant_key
 from app.db.client import TenantConnectionRegistry
 from app.db.outbox import OUTBOX_COLLECTION, OutboxRepository
@@ -11,6 +11,7 @@ from app.db.tenancy import (
     TenantDocument,
     TenantIsolationError,
     run_as_system,
+    sanitize_query,
 )
 
 __all__ = [
@@ -18,6 +19,7 @@ __all__ = [
     "TENANT_EXEMPT_COLLECTIONS",
     "DuplicateEntityError",
     "OutboxRepository",
+    "QuerySanitizationError",
     "TenantCollection",
     "TenantConnectionRegistry",
     "TenantDocument",
@@ -26,5 +28,6 @@ __all__ = [
     "VersionConflictError",
     "create_redis",
     "run_as_system",
+    "sanitize_query",
     "tenant_key",
 ]

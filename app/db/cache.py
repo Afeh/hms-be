@@ -15,4 +15,3 @@ def tenant_key(tenant_id: str, key: str) -> str:
 
 
 __all__ = ["create_redis", "tenant_key"]
-

@@ -40,6 +40,16 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = Field(default_factory=list)
 
+    # HTTP hardening and rate limits (plan section 12, issue 0006)
+    max_request_body_bytes: int = 1_048_576  # 1 MiB for JSON payloads
+    rate_limit_window_seconds: int = 60
+    rate_limit_login_ip: int = 10
+    rate_limit_login_email: int = 5
+    rate_limit_mfa: int = 5
+    rate_limit_password_reset: int = 5
+    rate_limit_invitation: int = 10
+    rate_limit_signup: int = 5
+
     @property
     def broker_url(self) -> str:
         """Celery broker, defaulting to the Redis instance already configured."""
