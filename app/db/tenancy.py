@@ -105,8 +105,9 @@ class TenantCollection:
         sort: Sequence[tuple[str, int]] | None = None,
         limit: int = 0,
         skip: int = 0,
+        **kwargs: Any,
     ) -> AsyncIOMotorCursor[dict[str, Any]]:
-        cursor = self._collection.find(self._scoped(filter), projection)
+        cursor = self._collection.find(self._scoped(filter), projection, **kwargs)
         if sort:
             cursor = cursor.sort(list(sort))
         if skip:
@@ -120,11 +121,14 @@ class TenantCollection:
         filter: Mapping[str, Any] | None = None,
         *,
         projection: Mapping[str, Any] | None = None,
+        **kwargs: Any,
     ) -> dict[str, Any] | None:
-        return await self._collection.find_one(self._scoped(filter), projection)
+        return await self._collection.find_one(self._scoped(filter), projection, **kwargs)
 
-    async def count_documents(self, filter: Mapping[str, Any] | None = None) -> int:
-        return await self._collection.count_documents(self._scoped(filter))
+    async def count_documents(
+        self, filter: Mapping[str, Any] | None = None, **kwargs: Any
+    ) -> int:
+        return await self._collection.count_documents(self._scoped(filter), **kwargs)
 
     def aggregate(
         self, pipeline: Sequence[Mapping[str, Any]], **kwargs: Any
@@ -133,11 +137,16 @@ class TenantCollection:
 
     # Writes ----------------------------------------------------------------
 
-    async def insert_one(self, document: Mapping[str, Any]) -> InsertOneResult:
-        return await self._collection.insert_one(self._stamped(document))
+    async def insert_one(
+        self, document: Mapping[str, Any], **kwargs: Any
+    ) -> InsertOneResult:
+        return await self._collection.insert_one(self._stamped(document), **kwargs)
 
-    async def insert_many(self, documents: Sequence[Mapping[str, Any]]) -> InsertManyResult:
-        return await self._collection.insert_many([self._stamped(doc) for doc in documents])
+    async def insert_many(
+        self, documents: Sequence[Mapping[str, Any]], **kwargs: Any
+    ) -> InsertManyResult:
+        stamped = [self._stamped(doc) for doc in documents]
+        return await self._collection.insert_many(stamped, **kwargs)
 
     async def update_one(
         self,
@@ -145,8 +154,11 @@ class TenantCollection:
         update: Mapping[str, Any],
         *,
         upsert: bool = False,
+        **kwargs: Any,
     ) -> UpdateResult:
-        return await self._collection.update_one(self._scoped(filter), update, upsert=upsert)
+        return await self._collection.update_one(
+            self._scoped(filter), update, upsert=upsert, **kwargs
+        )
 
     async def update_many(
         self,
@@ -154,8 +166,11 @@ class TenantCollection:
         update: Mapping[str, Any],
         *,
         upsert: bool = False,
+        **kwargs: Any,
     ) -> UpdateResult:
-        return await self._collection.update_many(self._scoped(filter), update, upsert=upsert)
+        return await self._collection.update_many(
+            self._scoped(filter), update, upsert=upsert, **kwargs
+        )
 
     async def find_one_and_update(
         self,
@@ -164,19 +179,21 @@ class TenantCollection:
         *,
         upsert: bool = False,
         return_document: bool = True,  # ReturnDocument.AFTER; pymongo types it as bool
+        **kwargs: Any,
     ) -> dict[str, Any] | None:
         return await self._collection.find_one_and_update(
             self._scoped(filter),
             update,
             upsert=upsert,
             return_document=return_document,
+            **kwargs,
         )
 
-    async def delete_one(self, filter: Mapping[str, Any]) -> DeleteResult:
-        return await self._collection.delete_one(self._scoped(filter))
+    async def delete_one(self, filter: Mapping[str, Any], **kwargs: Any) -> DeleteResult:
+        return await self._collection.delete_one(self._scoped(filter), **kwargs)
 
-    async def delete_many(self, filter: Mapping[str, Any]) -> DeleteResult:
-        return await self._collection.delete_many(self._scoped(filter))
+    async def delete_many(self, filter: Mapping[str, Any], **kwargs: Any) -> DeleteResult:
+        return await self._collection.delete_many(self._scoped(filter), **kwargs)
 
     # Scoping ---------------------------------------------------------------
 
