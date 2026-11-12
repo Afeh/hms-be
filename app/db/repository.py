@@ -18,7 +18,7 @@ from pymongo.errors import DuplicateKeyError
 
 from app.core.context import MissingContextError, current_context, get_context
 from app.core.errors import DuplicateEntityError, VersionConflictError
-from app.db.tenancy import TenantCollection, TenantDocument
+from app.db.tenancy import TenantCollection, TenantDocument, sanitize_query
 from app.utils.pagination import InvalidCursorError, decode_cursor, encode_cursor
 
 DEFAULT_PAGE_SIZE = 25
@@ -63,6 +63,7 @@ class TenantRepository[ModelT: TenantDocument]:
         include_deleted: bool = False,
     ) -> ModelT | None:
         """One matching document, excluding soft-deleted ones by default."""
+        sanitize_query(query)
         document = await self._collection.find_one(
             self._visible(query, include_deleted), projection=projection
         )
@@ -79,6 +80,8 @@ class TenantRepository[ModelT: TenantDocument]:
         include_deleted: bool = False,
     ) -> tuple[list[ModelT], str | None]:
         """Walk `_id` ascending by default, skipping soft-deleted rows."""
+        if filter:
+            sanitize_query(filter)
         limit = max(1, min(limit, MAX_PAGE_SIZE))
         query = self._visible(filter or {}, include_deleted)
         if cursor:
