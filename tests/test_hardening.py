@@ -37,6 +37,8 @@ def _make_settings(**overrides: Any) -> Settings:
         "mongodb_uri": "mongodb://127.0.0.1:1",
         "mongodb_server_selection_timeout_ms": 250,
         "redis_url": "redis://127.0.0.1:1/0",
+        "jwt_secret": "test-jwt-secret-0123456789abcdef0123456789",
+        "mfa_secret_key": "test-mfa-secret-0123456789abcdef0123456789",
     }
     base.update(overrides)
     return Settings(**base)

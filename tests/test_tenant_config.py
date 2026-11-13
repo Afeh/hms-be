@@ -11,7 +11,7 @@ from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
 
-from app.api.deps import get_redis, get_registry, get_tenant_config_store
+from app.api.deps import get_current_user, get_redis, get_registry, get_tenant_config_store
 from app.core import Settings
 from app.core.context import RequestContext, reset_context, set_context
 from app.db.tenant_configs import TenantConfigStore
@@ -37,6 +37,15 @@ def _make_settings(**overrides: Any) -> Settings:
     }
     base.update(overrides)
     return Settings(**base)
+
+
+def _allow(app: Any, *permissions: str) -> None:
+    """Bypass bearer resolution in route tests that set the context directly."""
+    from types import SimpleNamespace
+
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        permissions=frozenset(permissions)
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -180,6 +189,7 @@ async def test_update_config_invalidates_cache_and_publishes() -> None:
 async def test_get_tenant_config_returns_defaults_and_etag() -> None:
     settings = _make_settings()
     app = create_app(settings)
+    _allow(app, "tenant:configure")
 
     fake_cfg = default_config("t_acme")
     fake_store = AsyncMock(spec=TenantConfigStore)
@@ -218,6 +228,7 @@ async def test_get_tenant_config_returns_defaults_and_etag() -> None:
 async def test_patch_tenant_config_missing_if_match_returns_412() -> None:
     settings = _make_settings()
     app = create_app(settings)
+    _allow(app, "tenant:configure")
 
     token = set_context(
         RequestContext(
@@ -244,6 +255,7 @@ async def test_patch_tenant_config_missing_if_match_returns_412() -> None:
 async def test_patch_tenant_config_stale_if_match_returns_412() -> None:
     settings = _make_settings()
     app = create_app(settings)
+    _allow(app, "tenant:configure")
 
     fake_store = AsyncMock(spec=TenantConfigStore)
     # Stored version is 1, caller sends If-Match: "2"
@@ -282,6 +294,7 @@ async def test_patch_tenant_config_stale_if_match_returns_412() -> None:
 async def test_patch_tenant_config_invalid_field_returns_422() -> None:
     settings = _make_settings()
     app = create_app(settings)
+    _allow(app, "tenant:configure")
 
     token = set_context(
         RequestContext(
@@ -310,6 +323,7 @@ async def test_patch_tenant_config_invalid_field_returns_422() -> None:
 async def test_patch_tenant_config_success_audited() -> None:
     settings = _make_settings()
     app = create_app(settings)
+    _allow(app, "tenant:configure")
 
     fake_store = AsyncMock(spec=TenantConfigStore)
     old_cfg = default_config("t_acme")

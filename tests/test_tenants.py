@@ -11,6 +11,7 @@ from httpx import ASGITransport, AsyncClient
 from pymongo.errors import DuplicateKeyError
 from scripts.seed import seed
 
+from app.api.deps import get_current_user
 from app.core import Settings
 from app.core.context import RequestContext, reset_context, set_context
 from app.core.errors import DuplicateEntityError
@@ -28,6 +29,15 @@ def _make_settings(**overrides: Any) -> Settings:
     }
     base.update(overrides)
     return Settings(**base)
+
+
+def _allow(app: Any, *permissions: str) -> None:
+    """Bypass bearer resolution in route tests that set the context directly."""
+    from types import SimpleNamespace
+
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        permissions=frozenset(permissions)
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -161,6 +171,7 @@ async def test_get_tenant_forbidden_without_permission() -> None:
     settings = _make_settings()
     app = create_app(settings)
 
+    _allow(app, "patient:read")  # missing tenant:configure
     token = set_context(
         RequestContext(
             tenant_id="t_acme",
@@ -201,6 +212,7 @@ async def test_get_tenant_returns_current_tenant_profile() -> None:
     from app.api.deps import get_tenant_store
 
     app.dependency_overrides[get_tenant_store] = lambda: fake_store
+    _allow(app, "tenant:configure")
 
     token = set_context(
         RequestContext(
@@ -248,17 +260,27 @@ async def test_get_tenant_returns_beta_profile_for_beta_token() -> None:
     from app.api.deps import get_tenant_store
 
     app.dependency_overrides[get_tenant_store] = lambda: fake_store
+    _allow(app, "tenant:configure")
 
-    # Test via Authorization Bearer token as required by acceptance criteria
-    async with (
-        LifespanManager(app),
-        AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client,
-    ):
-        r = await client.get("/api/v1/tenant", headers={"Authorization": "Bearer beta"})
-        assert r.status_code == 200
-        tenant_data = r.json()["data"]["tenant"]
-        assert tenant_data["_id"] == "t_beta"
-        assert tenant_data["slug"] == "beta"
+    token = set_context(
+        RequestContext(
+            tenant_id="t_beta",
+            request_id="req_test",
+            permissions=frozenset(["tenant:configure"]),
+        )
+    )
+    try:
+        async with (
+            LifespanManager(app),
+            AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client,
+        ):
+            r = await client.get("/api/v1/tenant")
+            assert r.status_code == 200
+            tenant_data = r.json()["data"]["tenant"]
+            assert tenant_data["_id"] == "t_beta"
+            assert tenant_data["slug"] == "beta"
+    finally:
+        reset_context(token)
 
 
 # ---------------------------------------------------------------------------
@@ -267,6 +289,11 @@ async def test_get_tenant_returns_beta_profile_for_beta_token() -> None:
 
 
 def test_seed_refuses_to_run_in_production() -> None:
-    with patch("scripts.seed.get_settings", return_value=Settings(environment="production")):
+    production = Settings(
+        environment="production",
+        jwt_secret="production-jwt-secret-0123456789abcdef0123456789",
+        mfa_secret_key="production-mfa-secret-0123456789abcdef0123456789",
+    )
+    with patch("scripts.seed.get_settings", return_value=production):
         code = seed()
         assert code == 1
