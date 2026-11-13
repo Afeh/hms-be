@@ -31,6 +31,20 @@ uv run celery -A app.worker beat -l info      # scheduled queues
   installed routes, so commit it and regenerate it with
   `uv run python scripts/export_openapi.py` whenever a route changes.
 
+## Seeding (local development)
+
+Apply migrations and seed initial tenants for local development and login:
+
+```bash
+uv run mgm migrate               # applies database migrations
+uv run python scripts/seed.py    # seeds acme and beta tenants with admin identities
+```
+
+The seed script is idempotent and safe to run repeatedly. It creates:
+- Two tenants: `Acme Hospital` (slug: `acme`, America/New_York) and `Beta Clinic` (slug: `beta`, Europe/London)
+- Default tenant configurations and five role templates per tenant
+- Hospital Administrator identities: `admin@acme.example` and `admin@beta.example` (password: `Password123!`, MFA disabled)
+
 Docs are at `/docs`, the schema at `/openapi.json`, and the probes at
 `/api/v1/health/live` and `/api/v1/health/ready`.
 

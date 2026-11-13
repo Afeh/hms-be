@@ -32,8 +32,8 @@ yet; they come after M1 publishes its OpenAPI contract.
 | 0004 | [Repository primitives](0004-repository-primitives.md) | M0 | 0002 | Completed |
 | 0005 | [Transactional outbox](0005-transactional-outbox.md) | M0 | 0002, 0003 | Completed |
 | 0006 | [HTTP hardening and rate limits](0006-http-hardening.md) | M0 | — | Completed |
-| 0010 | [Tenant records and seeding](0010-tenant-records-and-seeding.md) | M1 | 0003, 0004 | Open |
-| 0011 | [Tenant configuration](0011-tenant-configuration.md) | M1 | 0010 | Open |
+| 0010 | [Tenant records and seeding](0010-tenant-records-and-seeding.md) | M1 | 0003, 0004 | Completed |
+| 0011 | [Tenant configuration](0011-tenant-configuration.md) | M1 | 0010 | Completed |
 | 0012 | [Identity and access models](0012-identity-and-access-models.md) | M1 | 0003, 0004, 0010 | Open |
 | 0013 | [Passwords, tokens and sessions](0013-passwords-tokens-sessions.md) | M1 | 0012 | Open |
 | 0014 | [Login and MFA](0014-login-and-mfa.md) | M1 | 0011, 0013, 0017 | Open |
