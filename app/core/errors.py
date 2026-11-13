@@ -12,6 +12,7 @@ from collections.abc import Mapping, Sequence
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.schemas.envelope import ErrorDetail, error_envelope
@@ -46,6 +47,14 @@ class VersionConflictError(Exception):
 
 class DuplicateEntityError(Exception):
     """A unique index rejected the write."""
+
+
+class QuerySanitizationError(Exception):
+    """A query or filter contains forbidden keys ($-prefixed or dotted)."""
+
+    def __init__(self, key: str) -> None:
+        super().__init__(f"forbidden query key: {key!r}")
+        self.key = key
 
 
 class ApiError(Exception):
@@ -104,10 +113,23 @@ async def duplicate_entity_handler(request: Request, exc: Exception) -> Response
     return _render(ApiError(409, "conflict", "The resource already exists"))
 
 
+async def query_sanitization_handler(request: Request, exc: Exception) -> Response:
+    del request
+    message = str(exc) if isinstance(exc, QuerySanitizationError) else "Invalid query filter"
+    return _render(
+        ApiError(
+            422,
+            "validation_failed",
+            message,
+            errors=[ErrorDetail(field="filter", message=str(exc))],
+        )
+    )
+
+
 async def validation_error_handler(request: Request, exc: Exception) -> Response:
     del request
     details: list[ErrorDetail] = []
-    if isinstance(exc, RequestValidationError):
+    if isinstance(exc, (RequestValidationError, ValidationError)):
         for error in exc.errors():
             location = [str(part) for part in error["loc"] if part not in {"body", "query", "path"}]
             details.append(
@@ -153,6 +175,8 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ApiError, api_error_handler)
     app.add_exception_handler(VersionConflictError, version_conflict_handler)
     app.add_exception_handler(DuplicateEntityError, duplicate_entity_handler)
+    app.add_exception_handler(QuerySanitizationError, query_sanitization_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
+    app.add_exception_handler(ValidationError, validation_error_handler)
     app.add_exception_handler(StarletteHTTPException, http_error_handler)
     app.add_exception_handler(Exception, unhandled_error_handler)

@@ -410,4 +410,3 @@ async def sweep_and_dispatch(
             await redis.aclose()
         if created_registry and registry is not None:
             await registry.close()
-

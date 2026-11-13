@@ -348,4 +348,3 @@ def test_beat_schedule_and_registered_tasks() -> None:
     assert "outbox-sweep-every-30-seconds" in schedule
     assert schedule["outbox-sweep-every-30-seconds"]["task"] == "outbox.sweep"
     assert schedule["outbox-sweep-every-30-seconds"]["schedule"] == 30.0
-
