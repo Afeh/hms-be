@@ -14,8 +14,8 @@ class PatientIdFormatResponse(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    prefix: str = "PAT"
-    pattern: str = "{PREFIX}-{YYYY}-{SEQ:6}"
+    prefix: str = "ACH"
+    pattern: str = "{PREFIX}-{RANDOM:5}-{YYYY}"
     sequence_start: int = 1
     reset_sequence: str = "never"
 
@@ -135,4 +135,3 @@ __all__ = [
     "TenantConfigPatch",
     "TenantConfigResponse",
 ]
-
