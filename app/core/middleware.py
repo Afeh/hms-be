@@ -30,7 +30,7 @@ import uuid
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from app.core.context import RequestContext, reset_context, set_context
+from app.core.context import RequestContext, current_context, reset_context, set_context
 from app.core.errors import ApiError
 from app.schemas.envelope import error_envelope
 
@@ -180,10 +180,15 @@ class RequestContextMiddleware:
         incoming = headers.get(REQUEST_ID_HEADER.encode(), b"").decode("latin-1")
         request_id = incoming if _VALID_REQUEST_ID.match(incoming) else _new_request_id()
 
+        existing = current_context()
         client = scope.get("client")
         user_agent = headers.get(b"user-agent", b"").decode("latin-1")
         token = set_context(
             RequestContext(
+                tenant_id=existing.tenant_id if existing else None,
+                user_id=existing.user_id if existing else None,
+                permissions=existing.permissions if existing else frozenset(),
+                session_id=existing.session_id if existing else None,
                 request_id=request_id,
                 ip=client[0] if client else None,
                 device_info=user_agent[:255] or None,
