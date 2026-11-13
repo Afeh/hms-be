@@ -1,6 +1,162 @@
 {
   "components": {
     "schemas": {
+      "AiConfigResponse": {
+        "description": "AI assistant settings.",
+        "properties": {
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "max_pages_per_document": {
+            "default": 10,
+            "title": "Max Pages Per Document",
+            "type": "integer"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Name"
+          },
+          "monthly_page_cap": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Page Cap"
+          },
+          "notice_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Version"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          }
+        },
+        "title": "AiConfigResponse",
+        "type": "object"
+      },
+      "BrandingConfigResponse": {
+        "description": "Branding overrides.",
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "favicon_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favicon Url"
+          },
+          "logo_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Key"
+          },
+          "logo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Url"
+          },
+          "primary_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Color"
+          },
+          "primary_colour": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Colour"
+          },
+          "support_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Support Email"
+          }
+        },
+        "title": "BrandingConfigResponse",
+        "type": "object"
+      },
       "Dependencies": {
         "properties": {
           "mongo": {
@@ -27,6 +183,19 @@
         "title": "Dependencies",
         "type": "object"
       },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
       "LiveHealth": {
         "properties": {
           "status": {
@@ -37,6 +206,80 @@
           }
         },
         "title": "LiveHealth",
+        "type": "object"
+      },
+      "ModulesConfigResponse": {
+        "description": "Enabled feature modules.",
+        "properties": {
+          "ai_extraction": {
+            "default": false,
+            "title": "Ai Extraction",
+            "type": "boolean"
+          },
+          "billing": {
+            "default": false,
+            "title": "Billing",
+            "type": "boolean"
+          },
+          "icd_coding": {
+            "default": false,
+            "title": "Icd Coding",
+            "type": "boolean"
+          },
+          "insurance": {
+            "default": false,
+            "title": "Insurance",
+            "type": "boolean"
+          },
+          "laboratory": {
+            "default": false,
+            "title": "Laboratory",
+            "type": "boolean"
+          },
+          "pharmacy": {
+            "default": false,
+            "title": "Pharmacy",
+            "type": "boolean"
+          },
+          "radiology": {
+            "default": false,
+            "title": "Radiology",
+            "type": "boolean"
+          },
+          "telemedicine": {
+            "default": false,
+            "title": "Telemedicine",
+            "type": "boolean"
+          }
+        },
+        "title": "ModulesConfigResponse",
+        "type": "object"
+      },
+      "PatientIdFormatResponse": {
+        "description": "Patient ID format settings.",
+        "properties": {
+          "pattern": {
+            "default": "{PREFIX}-{RANDOM:5}-{YYYY}",
+            "title": "Pattern",
+            "type": "string"
+          },
+          "prefix": {
+            "default": "ACH",
+            "title": "Prefix",
+            "type": "string"
+          },
+          "reset_sequence": {
+            "default": "never",
+            "title": "Reset Sequence",
+            "type": "string"
+          },
+          "sequence_start": {
+            "default": 1,
+            "title": "Sequence Start",
+            "type": "integer"
+          }
+        },
+        "title": "PatientIdFormatResponse",
         "type": "object"
       },
       "ReadyHealth": {
@@ -58,6 +301,360 @@
           "dependencies"
         ],
         "title": "ReadyHealth",
+        "type": "object"
+      },
+      "RetentionConfigResponse": {
+        "description": "Data retention policy.",
+        "properties": {
+          "audit_logs_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Logs Days"
+          },
+          "audit_years": {
+            "default": 7,
+            "title": "Audit Years",
+            "type": "integer"
+          },
+          "clinical_years": {
+            "default": 15,
+            "title": "Clinical Years",
+            "type": "integer"
+          },
+          "document_years": {
+            "default": 15,
+            "title": "Document Years",
+            "type": "integer"
+          },
+          "outbox_days": {
+            "default": 30,
+            "title": "Outbox Days",
+            "type": "integer"
+          },
+          "patient_records_years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Records Years"
+          }
+        },
+        "title": "RetentionConfigResponse",
+        "type": "object"
+      },
+      "SecurityConfigResponse": {
+        "description": "Security / session timeout settings.",
+        "properties": {
+          "absolute_timeout_hours": {
+            "default": 8,
+            "title": "Absolute Timeout Hours",
+            "type": "integer"
+          },
+          "break_glass_minutes": {
+            "default": 15,
+            "title": "Break Glass Minutes",
+            "type": "integer"
+          },
+          "idle_timeout_min": {
+            "default": 30,
+            "title": "Idle Timeout Min",
+            "type": "integer"
+          },
+          "password_min_length": {
+            "default": 8,
+            "title": "Password Min Length",
+            "type": "integer"
+          }
+        },
+        "title": "SecurityConfigResponse",
+        "type": "object"
+      },
+      "TenantConfigPatch": {
+        "additionalProperties": false,
+        "description": "Partial patch body for ``PATCH /tenant/config``.\n\nAll fields are optional; unknown top-level fields are rejected (extra=forbid\ninherited from BaseSchema). Sub-object patches deep-merge into the stored doc.",
+        "properties": {
+          "ai": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai"
+          },
+          "branding": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branding"
+          },
+          "document_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Types"
+          },
+          "modules": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modules"
+          },
+          "patient_id_format": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Id Format"
+          },
+          "retention": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention"
+          },
+          "security": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Security"
+          },
+          "visit_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Types"
+          }
+        },
+        "title": "TenantConfigPatch",
+        "type": "object"
+      },
+      "TenantConfigResponse": {
+        "description": "The full effective configuration for a tenant.\n\nReturned by ``GET /tenant/config`` and ``PATCH /tenant/config``.\nResponse models remain permissive (extra fields ignored).",
+        "properties": {
+          "ai": {
+            "$ref": "#/components/schemas/AiConfigResponse"
+          },
+          "branding": {
+            "$ref": "#/components/schemas/BrandingConfigResponse"
+          },
+          "document_types": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Document Types",
+            "type": "array"
+          },
+          "modules": {
+            "$ref": "#/components/schemas/ModulesConfigResponse"
+          },
+          "patient_id_format": {
+            "$ref": "#/components/schemas/PatientIdFormatResponse"
+          },
+          "retention": {
+            "$ref": "#/components/schemas/RetentionConfigResponse"
+          },
+          "security": {
+            "$ref": "#/components/schemas/SecurityConfigResponse"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "visit_types": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Visit Types",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "version",
+          "branding",
+          "modules",
+          "patient_id_format",
+          "document_types",
+          "visit_types",
+          "ai",
+          "security",
+          "retention"
+        ],
+        "title": "TenantConfigResponse",
+        "type": "object"
+      },
+      "TenantProfileResponse": {
+        "additionalProperties": false,
+        "description": "The public profile of the caller's tenant.\n\nReturned by ``GET /tenant``. Only safe, non-sensitive fields are exposed.",
+        "properties": {
+          "_id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "legal_hold": {
+            "default": false,
+            "title": "Legal Hold",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "_id",
+          "name",
+          "slug",
+          "status",
+          "plan",
+          "timezone"
+        ],
+        "title": "TenantProfileResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
         "type": "object"
       }
     }
@@ -116,6 +713,120 @@
         "summary": "Ready",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/v1/tenant": {
+      "get": {
+        "description": "Return the calling tenant's profile.\n\nThe tenant ID comes from the verified request context (set by authentication\nmiddleware or by ``run_as_system`` in tests).  A missing context means the\nrequest was not authenticated and returns 401.",
+        "operationId": "tenant_profile_api_v1_tenant_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/TenantProfileResponse"
+                  },
+                  "title": "Response Tenant Profile Api V1 Tenant Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Tenant Profile",
+        "tags": [
+          "tenant"
+        ]
+      }
+    },
+    "/api/v1/tenant/config": {
+      "get": {
+        "description": "Return the effective tenant configuration.\n\nWorks even when no config document exists (defaults are returned).\nSets an ``ETag`` header with the config version for optimistic concurrency.",
+        "operationId": "get_tenant_config_api_v1_tenant_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/TenantConfigResponse"
+                  },
+                  "title": "Response Get Tenant Config Api V1 Tenant Config Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Tenant Config",
+        "tags": [
+          "tenant-config"
+        ]
+      },
+      "patch": {
+        "description": "Apply a partial update to the tenant configuration.\n\nRequires ``If-Match: \"<version>\"`` for optimistic concurrency.\nReturns ``412 version_mismatch`` for a stale version.\nReturns ``422 validation_failed`` for an invalid patch.",
+        "operationId": "patch_tenant_config_api_v1_tenant_config_patch",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantConfigPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/TenantConfigResponse"
+                  },
+                  "title": "Response Patch Tenant Config Api V1 Tenant Config Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Tenant Config",
+        "tags": [
+          "tenant-config"
         ]
       }
     }
