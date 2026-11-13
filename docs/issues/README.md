@@ -34,21 +34,30 @@ yet; they come after M1 publishes its OpenAPI contract.
 | 0006 | [HTTP hardening and rate limits](0006-http-hardening.md) | M0 | — | Completed |
 | 0010 | [Tenant records and seeding](0010-tenant-records-and-seeding.md) | M1 | 0003, 0004 | Completed |
 | 0011 | [Tenant configuration](0011-tenant-configuration.md) | M1 | 0010 | Completed |
-| 0012 | [Identity and access models](0012-identity-and-access-models.md) | M1 | 0003, 0004, 0010 | Open |
-| 0013 | [Passwords, tokens and sessions](0013-passwords-tokens-sessions.md) | M1 | 0012 | Open |
-| 0014 | [Login and MFA](0014-login-and-mfa.md) | M1 | 0011, 0013, 0017 | Open |
-| 0015 | [Password reset and change](0015-password-reset-and-change.md) | M1 | 0013, 0014 | Open |
-| 0016 | [Profile and session endpoints](0016-profile-and-sessions.md) | M1 | 0014, 0017 | Open |
-| 0017 | [Permission catalogue and auth dependencies](0017-permission-catalogue.md) | M1 | 0011, 0012, 0013 | Open |
-| 0018 | [Roles endpoints](0018-roles.md) | M1 | 0012, 0017 | Open |
-| 0019 | [Invitations and acceptance](0019-invitations.md) | M1 | 0015, 0017, 0018 | Open |
-| 0020 | [Staff management](0020-staff-management.md) | M1 | 0018, 0019 | Open |
-| 0021 | [Audit core](0021-audit-core.md) | M1 | 0012, 0017 | Open |
-| 0022 | [Isolation test suite](0022-isolation-suite.md) | M1 | 0010 to 0021 | Open |
+| 0012 | [Identity and access models](0012-identity-and-access-models.md) | M1 | 0003, 0004, 0010 | 🏃 Sprint |
+| 0013 | [Passwords, tokens and sessions](0013-passwords-tokens-sessions.md) | M1 | 0012 | 🏃 Sprint |
+| 0014 | [Login and MFA](0014-login-and-mfa.md) | M1 | 0011, 0013, 0017 | 🏃 Sprint (simplified) |
+| 0015 | [Password reset and change](0015-password-reset-and-change.md) | M1 | 0013, 0014 | 🏃 Sprint |
+| 0016 | [Profile and session endpoints](0016-profile-and-sessions.md) | M1 | 0014, 0017 | 🏃 Sprint |
+| 0017 | [Permission catalogue and auth dependencies](0017-permission-catalogue.md) | M1 | 0011, 0012, 0013 | 🏃 Sprint |
+| 0018 | [Roles endpoints](0018-roles.md) | M1 | 0012, 0017 | 🏃 Sprint |
+| 0019 | [Invitations and acceptance](0019-invitations.md) | M1 | 0015, 0017, 0018 | Deferred |
+| 0020 | [Staff management](0020-staff-management.md) | M1 | 0018, 0019 | Deferred |
+| 0021 | [Audit core](0021-audit-core.md) | M1 | 0012, 0017 | Deferred |
+| 0022 | [Isolation test suite](0022-isolation-suite.md) | M1 | 0010 to 0021 | Deferred |
 
-Suggested order: 0001 and 0002 first, then 0003, 0004, 0006, 0005. Inside M1:
-0010, 0011, 0012, 0013, 0017, 0018, then 0014, 0015, 0019, 0020, 0016, 0021,
-and 0022 last as the gate.
+## Sprint Tickets (2-week MVP — Nov 13–27)
+
+See [sprint-plan.md](sprint-plan.md) for the full plan, schedule, and
+simplifications.
+
+| # | Ticket | Depends on | Status |
+| :-- | :-- | :-- | :-- |
+| S001 | [Patient registration (MVP)](sprint/S001-patient-registration.md) | 0017 | 🏃 Sprint |
+| S002 | [Visits and vitals (MVP)](sprint/S002-visits-and-vitals.md) | S001 | 🏃 Sprint |
+| S003 | [Minimal invitation accept](sprint/S003-minimal-invitations.md) | 0013, 0017, 0018 | 🏃 Sprint |
+
+Suggested order: 0012, 0013, 0017, 0014, 0018, 0016, 0015, S003, S001, S002.
 
 ## Already in place
 
