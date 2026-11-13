@@ -12,6 +12,7 @@ from collections.abc import Mapping, Sequence
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.schemas.envelope import ErrorDetail, error_envelope
@@ -128,7 +129,7 @@ async def query_sanitization_handler(request: Request, exc: Exception) -> Respon
 async def validation_error_handler(request: Request, exc: Exception) -> Response:
     del request
     details: list[ErrorDetail] = []
-    if isinstance(exc, RequestValidationError):
+    if isinstance(exc, (RequestValidationError, ValidationError)):
         for error in exc.errors():
             location = [str(part) for part in error["loc"] if part not in {"body", "query", "path"}]
             details.append(
@@ -176,5 +177,6 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(DuplicateEntityError, duplicate_entity_handler)
     app.add_exception_handler(QuerySanitizationError, query_sanitization_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
+    app.add_exception_handler(ValidationError, validation_error_handler)
     app.add_exception_handler(StarletteHTTPException, http_error_handler)
     app.add_exception_handler(Exception, unhandled_error_handler)
