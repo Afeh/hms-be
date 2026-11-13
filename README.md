@@ -20,6 +20,35 @@ MongoDB must run as a single-node replica set because multi-document transaction
 are required (patient merge, versioned entries, ID counters). Redis is needed for
 the worker, the session cache and rate limits.
 
+Start the project-local replica set on port 27018 (the MongoDB Windows service on
+27017 is standalone and cannot run transactions):
+
+```bash
+mkdir -p .mongo/data
+"/c/Program Files/MongoDB/Server/9.0/bin/mongod.exe" \
+  --replSet rs0 --port 27018 --bind_ip 127.0.0.1 \
+  --dbpath "$(cygpath -w "$PWD/.mongo/data")" \
+  --logpath "$(cygpath -w "$PWD/.mongo/mongod.log")" &
+```
+
+The first time only, initiate the set:
+
+```bash
+uv run python - <<'PY'
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://127.0.0.1:27018/?directConnection=true")
+client.admin.command(
+    "replSetInitiate",
+    {"_id": "rs0", "members": [{"_id": 0, "host": "127.0.0.1:27018"}]},
+)
+print(client.admin.command("hello")["isWritablePrimary"])
+PY
+```
+
+The data directory is `.mongo/` (gitignored). Stop it with Ctrl-C in the terminal
+that started it, or `taskkill //PID <pid> //F`.
+
 ## Run
 
 ```bash
@@ -72,7 +101,7 @@ uv run ruff check .
 uv run mypy
 uv run lint-imports
 uv run pytest
-MONGODB_URI=mongodb://127.0.0.1:27017 uv run pytest -m integration
+MONGODB_URI='mongodb://127.0.0.1:27018/?replicaSet=rs0' uv run pytest -m integration
 ```
 
 `lint-imports` enforces that nothing outside `app/db/` imports the MongoDB driver:
