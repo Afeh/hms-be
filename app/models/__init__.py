@@ -3,8 +3,25 @@
 Response bodies belong in `app.schemas`; these are the stored shapes.
 """
 
+from app.models.identity import Identity, MfaState, PersonName
 from app.models.outbox import OutboxEvent
+from app.models.refresh_token import RefreshToken
+from app.models.role import Role
+from app.models.session import Session
 from app.models.tenant import Tenant
 from app.models.tenant_config import TenantConfig
+from app.models.user import ProfessionalProfile, User
 
-__all__ = ["OutboxEvent", "Tenant", "TenantConfig"]
+__all__ = [
+    "Identity",
+    "MfaState",
+    "OutboxEvent",
+    "PersonName",
+    "ProfessionalProfile",
+    "RefreshToken",
+    "Role",
+    "Session",
+    "Tenant",
+    "TenantConfig",
+    "User",
+]
