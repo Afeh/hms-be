@@ -13,18 +13,24 @@ from app.db.tenancy import (
     run_as_system,
     sanitize_query,
 )
+from app.db.tenant_configs import TENANT_CONFIGS_COLLECTION, TenantConfigStore
+from app.db.tenants import TENANTS_COLLECTION, TenantStore
 
 __all__ = [
     "OUTBOX_COLLECTION",
+    "TENANTS_COLLECTION",
+    "TENANT_CONFIGS_COLLECTION",
     "TENANT_EXEMPT_COLLECTIONS",
     "DuplicateEntityError",
     "OutboxRepository",
     "QuerySanitizationError",
     "TenantCollection",
+    "TenantConfigStore",
     "TenantConnectionRegistry",
     "TenantDocument",
     "TenantIsolationError",
     "TenantRepository",
+    "TenantStore",
     "VersionConflictError",
     "create_redis",
     "run_as_system",

@@ -28,6 +28,11 @@ class TenantConnectionRegistry:
     def client(self) -> AsyncIOMotorClient[dict[str, Any]]:
         return self._client
 
+    @property
+    def database(self) -> AsyncIOMotorDatabase[dict[str, Any]]:
+        """Shared default database for Release 1."""
+        return self._client[self._database_name]
+
     def database_for(self, tenant_id: str) -> AsyncIOMotorDatabase[dict[str, Any]]:
         """Resolve the database for a tenant. Dedicated tenants land here later."""
         del tenant_id
