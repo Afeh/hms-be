@@ -1,4 +1,5 @@
 .venv/
+.mongo/
 __pycache__/
 *.py[cod]
 .env
