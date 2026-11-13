@@ -65,6 +65,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+    app.state.settings = settings
     register_exception_handlers(app)
     app.include_router(api_router, prefix=settings.api_prefix)
     return app
