@@ -10,13 +10,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from pymongo import ASCENDING
+from pymongo import ASCENDING, DESCENDING
 
 IDENTITIES_COLLECTION = "identities"
 USERS_COLLECTION = "users"
 ROLES_COLLECTION = "roles"
 SESSIONS_COLLECTION = "sessions"
 REFRESH_TOKENS_COLLECTION = "refresh_tokens"
+PATIENTS_COLLECTION = "patients"
+COUNTERS_COLLECTION = "counters"
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,30 +115,70 @@ IDENTITY_ACCESS_INDEXES: tuple[IndexSpec, ...] = (
     ),
 )
 
+PATIENT_INDEXES: tuple[IndexSpec, ...] = (
+    IndexSpec(
+        collection=PATIENTS_COLLECTION,
+        keys=(("tenant_id", ASCENDING), ("patient_number", ASCENDING)),
+        name="ix_patients_tenant_number_unique",
+        unique=True,
+    ),
+    IndexSpec(
+        collection=PATIENTS_COLLECTION,
+        keys=(("tenant_id", ASCENDING), ("status", ASCENDING)),
+        name="ix_patients_tenant_status",
+    ),
+    IndexSpec(
+        collection=PATIENTS_COLLECTION,
+        keys=(("tenant_id", ASCENDING), ("registration_date", DESCENDING)),
+        name="ix_patients_tenant_registration_date",
+    ),
+    IndexSpec(
+        collection=COUNTERS_COLLECTION,
+        keys=(("tenant_id", ASCENDING), ("key", ASCENDING)),
+        name="ix_counters_tenant_key_unique",
+        unique=True,
+    ),
+)
+
 
 def create_indexes_sync(db: Any) -> None:
-    """Apply every spec to a PyMongo database (used by the migration)."""
+    """Apply every identity/access spec to a PyMongo database (migration 0005)."""
     for spec in IDENTITY_ACCESS_INDEXES:
         db[spec.collection].create_index(list(spec.keys), **spec.options())
 
 
 async def create_indexes(db: Any) -> None:
-    """Apply every spec to a Motor database (used by integration tests)."""
+    """Apply every identity/access spec to a Motor database (integration tests)."""
     for spec in IDENTITY_ACCESS_INDEXES:
+        await db[spec.collection].create_index(list(spec.keys), **spec.options())
+
+
+def create_patient_indexes_sync(db: Any) -> None:
+    """Apply patient and counter indexes to a PyMongo database (migration 0006)."""
+    for spec in PATIENT_INDEXES:
+        db[spec.collection].create_index(list(spec.keys), **spec.options())
+
+
+async def create_patient_indexes(db: Any) -> None:
+    """Apply patient and counter indexes to a Motor database (integration tests)."""
+    for spec in PATIENT_INDEXES:
         await db[spec.collection].create_index(list(spec.keys), **spec.options())
 
 
 def index_for(collection: str, name: str) -> IndexSpec:
     """Look up a spec by collection and index name, for tests."""
-    for spec in IDENTITY_ACCESS_INDEXES:
+    for spec in (*IDENTITY_ACCESS_INDEXES, *PATIENT_INDEXES):
         if spec.collection == collection and spec.name == name:
             return spec
     raise KeyError(f"no index {name!r} on {collection!r}")
 
 
 __all__ = [
+    "COUNTERS_COLLECTION",
     "IDENTITIES_COLLECTION",
     "IDENTITY_ACCESS_INDEXES",
+    "PATIENTS_COLLECTION",
+    "PATIENT_INDEXES",
     "REFRESH_TOKENS_COLLECTION",
     "ROLES_COLLECTION",
     "SESSIONS_COLLECTION",
@@ -144,5 +186,7 @@ __all__ = [
     "IndexSpec",
     "create_indexes",
     "create_indexes_sync",
+    "create_patient_indexes",
+    "create_patient_indexes_sync",
     "index_for",
 ]

@@ -45,25 +45,44 @@ class TenantIsolationError(RuntimeError):
     """Raised when a caller tries to read or write another tenant's documents."""
 
 
+#: Comparison operators the application may use in a field filter. They are
+#: only accepted nested inside a field (for example ``{"created_at": {"$gte":
+#: since}}``), never at the top level, and their values must be scalars.
+SAFE_COMPARISON_OPERATORS: frozenset[str] = frozenset({"$gt", "$gte", "$lt", "$lte"})
+
+
 def sanitize_query(query: Mapping[str, Any] | None) -> dict[str, Any]:
-    """Reject $-prefixed keys and dotted keys to prevent operator injection."""
+    """Reject injection keys while allowing field-level comparison operators.
+
+    Route parameters are typed before they reach a repository, so a date range
+    such as ``{"registration_date": {"$gte": start}}`` is safe. Operators that
+    can execute code or change query structure (``$where``, ``$function``,
+    ``$expr``, ``$lookup``) remain forbidden, as do dotted keys and top-level
+    operators.
+    """
     if not query:
         return {}
 
-    def _check_mapping(mapping: Mapping[str, Any]) -> None:
+    def _check_mapping(mapping: Mapping[str, Any], *, allow_operators: bool) -> None:
         for k, v in mapping.items():
-            if k.startswith("$") or "." in k:
+            if k.startswith("$"):
+                if not allow_operators or k not in SAFE_COMPARISON_OPERATORS:
+                    raise QuerySanitizationError(k)
+                if isinstance(v, (Mapping, list, tuple, set)):
+                    raise QuerySanitizationError(k)
+                continue
+            if "." in k:
                 raise QuerySanitizationError(k)
             _check_value(v)
 
     def _check_value(val: Any) -> None:
         if isinstance(val, Mapping):
-            _check_mapping(val)
+            _check_mapping(val, allow_operators=True)
         elif isinstance(val, (list, tuple, set)):
             for item in val:
                 _check_value(item)
 
-    _check_mapping(query)
+    _check_mapping(query, allow_operators=False)
     return dict(query)
 
 
