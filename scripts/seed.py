@@ -28,6 +28,67 @@ from app.models.tenant_config import PatientIdFormat, generate_patient_id
 # Known local credentials for development
 ADMIN_PASSWORD = "Password123!"  # noqa: S105
 
+SAMPLE_PATIENTS: dict[str, list[dict[str, Any]]] = {
+    "acme": [
+        {
+            "given": ["Ada", "Ngozi"],
+            "family": "Okafor",
+            "sex": "female",
+            "date_of_birth": (1991, 4, 18),
+            "phone": "+2348031234567",
+            "city": "Enugu",
+            "state": "Enugu",
+        },
+        {
+            "given": ["Chinedu", "Emeka"],
+            "family": "Balogun",
+            "sex": "male",
+            "date_of_birth": (1985, 11, 2),
+            "phone": "+2348062345678",
+            "city": "Lagos",
+            "state": "Lagos",
+        },
+        {
+            "given": ["Fatima", "Amina"],
+            "family": "Bello",
+            "sex": "female",
+            "date_of_birth": (1998, 7, 25),
+            "phone": "+2348093456789",
+            "city": "Abuja",
+            "state": "FCT",
+        },
+    ],
+    "beta": [
+        {
+            "given": ["Amara", "Chioma"],
+            "family": "Eze",
+            "sex": "female",
+            "date_of_birth": (1990, 2, 14),
+            "phone": "+2347034567890",
+            "city": "Onitsha",
+            "state": "Anambra",
+        },
+        {
+            "given": ["David", "Adewale"],
+            "family": "Cole",
+            "sex": "male",
+            "date_of_birth": (1979, 9, 9),
+            "phone": "+2347055678901",
+            "city": "Port Harcourt",
+            "state": "Rivers",
+        },
+        {
+            "given": ["Grace", "Nneka"],
+            "family": "Ibrahim",
+            "sex": "female",
+            "date_of_birth": (2001, 12, 30),
+            "phone": "+2347066789012",
+            "city": "Kano",
+            "state": "Kano",
+        },
+    ],
+}
+
 TENANTS_DATA: list[dict[str, Any]] = [
     {
         "slug": "acme",
@@ -52,6 +113,63 @@ TENANTS_DATA: list[dict[str, Any]] = [
         "admin_name": {"given": "Beta", "family": "Admin"},
     },
 ]
+
+
+def _seed_patients(
+    db: Any,
+    tenant_id: str,
+    slug: str,
+    code: str,
+    now: datetime,
+) -> list[str]:
+    """Create the demo patients once per tenant, keyed by a stable legacy number."""
+    format_config = PatientIdFormat(prefix=code, pattern="{PREFIX}-{RANDOM:5}-{YYYY}")
+    numbers: list[str] = []
+    for index, sample in enumerate(SAMPLE_PATIENTS.get(slug, []), start=1):
+        legacy_number = f"seed-{slug}-{index:02d}"
+        existing = db["patients"].find_one({"tenant_id": tenant_id, "legacy_number": legacy_number})
+        if existing is not None:
+            numbers.append(str(existing["patient_number"]))
+            continue
+
+        patient_number = generate_patient_id(
+            format_config,
+            registration_year=now.year,
+        )
+        year, month, day = sample["date_of_birth"]
+        given = list(sample["given"])
+        family = str(sample["family"])
+        db["patients"].insert_one(
+            {
+                "tenant_id": tenant_id,
+                "patient_number": patient_number,
+                "status": "active",
+                "name": {"given": given, "family": family},
+                "date_of_birth": datetime(year, month, day, tzinfo=UTC),
+                "dob_approximate": False,
+                "sex": sample["sex"],
+                "phones": [sample["phone"]],
+                "address": {
+                    "line1": None,
+                    "line2": None,
+                    "city": sample["city"],
+                    "state": sample["state"],
+                    "postal_code": None,
+                    "country": "NG",
+                },
+                "next_of_kin": [],
+                "registration_date": now,
+                "payer": None,
+                "care_team": [],
+                "legacy_number": legacy_number,
+                "paper_file": False,
+                "display_name": f"{' '.join(given)} {family}",
+                "version": 1,
+                "created_at": now,
+            }
+        )
+        numbers.append(patient_number)
+    return numbers
 
 
 def seed() -> int:
@@ -266,6 +384,7 @@ def seed() -> int:
                         },
                     )
 
+                sample_numbers = _seed_patients(db, tenant_id, slug, code, now)
                 sample_id = generate_patient_id(
                     PatientIdFormat(prefix=code, pattern="{PREFIX}-{RANDOM:5}-{YYYY}")
                 )
@@ -276,6 +395,7 @@ def seed() -> int:
                         "code": code,
                         "tenant_id": tenant_id,
                         "sample_patient_id": sample_id,
+                        "sample_patient_numbers": ", ".join(sample_numbers),
                         "admin_email": admin_email,
                         "admin_password": ADMIN_PASSWORD,
                     }
@@ -287,6 +407,7 @@ def seed() -> int:
             print(f"  Tenant ID:         {s['tenant_id']}")
             print(f"  Hospital Code:     {s['code']}")
             print(f"  Sample Patient ID: {s['sample_patient_id']}")
+            print(f"  Seeded Patients:   {s['sample_patient_numbers']}")
             print(f"  Admin Email:       {s['admin_email']}")
             print(f"  Admin Password:    {s['admin_password']}")
 
