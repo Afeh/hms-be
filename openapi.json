@@ -208,6 +208,268 @@
         "title": "LiveHealth",
         "type": "object"
       },
+      "LoginRequest": {
+        "additionalProperties": false,
+        "description": "Credentials accepted by ``POST /auth/login``.",
+        "properties": {
+          "device_label": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Label"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest",
+        "type": "object"
+      },
+      "LoginResponse": {
+        "description": "The successful login response envelope payload.",
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "expires_in": {
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "mfa_required": {
+            "default": false,
+            "title": "Mfa Required",
+            "type": "boolean"
+          },
+          "refresh_expires_at": {
+            "format": "date-time",
+            "title": "Refresh Expires At",
+            "type": "string"
+          },
+          "refresh_token": {
+            "title": "Refresh Token",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/LoginUser"
+          }
+        },
+        "required": [
+          "access_token",
+          "expires_in",
+          "refresh_token",
+          "refresh_expires_at",
+          "user"
+        ],
+        "title": "LoginResponse",
+        "type": "object"
+      },
+      "LoginUser": {
+        "description": "The signed-in identity, membership and roles returned by login.",
+        "properties": {
+          "_id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "is_verified": {
+            "title": "Is Verified",
+            "type": "boolean"
+          },
+          "name": {
+            "$ref": "#/components/schemas/NameSchema"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleSummary"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "_id",
+          "email",
+          "name",
+          "is_verified",
+          "tenant_id",
+          "roles",
+          "permissions"
+        ],
+        "title": "LoginUser",
+        "type": "object"
+      },
+      "MeResponse": {
+        "description": "The caller's profile, effective permissions and tenant.",
+        "properties": {
+          "perm_version": {
+            "title": "Perm Version",
+            "type": "integer"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleSummary"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantProfileResponse"
+          },
+          "user": {
+            "$ref": "#/components/schemas/MeUser"
+          }
+        },
+        "required": [
+          "user",
+          "roles",
+          "permissions",
+          "tenant",
+          "perm_version"
+        ],
+        "title": "MeResponse",
+        "type": "object"
+      },
+      "MeUser": {
+        "description": "The caller's identity and membership fields exposed by ``GET /auth/me``.",
+        "properties": {
+          "_id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "is_verified": {
+            "title": "Is Verified",
+            "type": "boolean"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "mfa_enabled": {
+            "default": false,
+            "title": "Mfa Enabled",
+            "type": "boolean"
+          },
+          "name": {
+            "$ref": "#/components/schemas/NameSchema"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "_id",
+          "email",
+          "name",
+          "is_verified",
+          "tenant_id",
+          "status"
+        ],
+        "title": "MeUser",
+        "type": "object"
+      },
       "ModulesConfigResponse": {
         "description": "Enabled feature modules.",
         "properties": {
@@ -253,6 +515,39 @@
           }
         },
         "title": "ModulesConfigResponse",
+        "type": "object"
+      },
+      "NameSchema": {
+        "description": "A person's name in API responses.",
+        "properties": {
+          "family": {
+            "title": "Family",
+            "type": "string"
+          },
+          "given": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Given",
+            "type": "array"
+          },
+          "other": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Other"
+          }
+        },
+        "required": [
+          "given",
+          "family"
+        ],
+        "title": "NameSchema",
         "type": "object"
       },
       "PatientIdFormatResponse": {
@@ -350,6 +645,35 @@
           }
         },
         "title": "RetentionConfigResponse",
+        "type": "object"
+      },
+      "RoleSummary": {
+        "description": "The role fields the client needs after login and on the profile.",
+        "properties": {
+          "_id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "mfa_required": {
+            "default": false,
+            "title": "Mfa Required",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "_id",
+          "key",
+          "name"
+        ],
+        "title": "RoleSummary",
         "type": "object"
       },
       "SecurityConfigResponse": {
@@ -666,6 +990,70 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "Authenticate an email and password, then issue a session token pair.",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "description": "Return the authenticated caller's profile, roles and permissions.",
+        "operationId": "me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "live_api_v1_health_live_get",
