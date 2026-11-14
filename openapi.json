@@ -550,6 +550,214 @@
         "title": "NameSchema",
         "type": "object"
       },
+      "NextOfKinSchema": {
+        "description": "A next-of-kin contact.",
+        "properties": {
+          "name": {
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "relationship": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relationship"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "NextOfKinSchema",
+        "type": "object"
+      },
+      "PatientAddressSchema": {
+        "description": "A patient's address.",
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "maxLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "line1": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line1"
+          },
+          "line2": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line2"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "title": "PatientAddressSchema",
+        "type": "object"
+      },
+      "PatientCreate": {
+        "additionalProperties": false,
+        "description": "Registration body for ``POST /patients``.",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PatientAddressSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "date_of_birth": {
+            "format": "date",
+            "title": "Date Of Birth",
+            "type": "string"
+          },
+          "dob_approximate": {
+            "default": false,
+            "title": "Dob Approximate",
+            "type": "boolean"
+          },
+          "legacy_number": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legacy Number"
+          },
+          "name": {
+            "$ref": "#/components/schemas/PatientNameSchema"
+          },
+          "next_of_kin": {
+            "items": {
+              "$ref": "#/components/schemas/NextOfKinSchema"
+            },
+            "maxItems": 5,
+            "title": "Next Of Kin",
+            "type": "array"
+          },
+          "paper_file": {
+            "default": false,
+            "title": "Paper File",
+            "type": "boolean"
+          },
+          "payer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PayerSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "phones": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 5,
+            "title": "Phones",
+            "type": "array"
+          },
+          "sex": {
+            "default": "unknown",
+            "enum": [
+              "male",
+              "female",
+              "other",
+              "unknown"
+            ],
+            "title": "Sex",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "date_of_birth"
+        ],
+        "title": "PatientCreate",
+        "type": "object"
+      },
       "PatientIdFormatResponse": {
         "description": "Patient ID format settings.",
         "properties": {
@@ -575,6 +783,453 @@
           }
         },
         "title": "PatientIdFormatResponse",
+        "type": "object"
+      },
+      "PatientListItem": {
+        "description": "The compact patient shape returned by the list endpoint.",
+        "properties": {
+          "_id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "date_of_birth": {
+            "format": "date",
+            "title": "Date Of Birth",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "last_visit_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Visit Date"
+          },
+          "patient_number": {
+            "title": "Patient Number",
+            "type": "string"
+          },
+          "phones": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Phones",
+            "type": "array"
+          },
+          "registration_date": {
+            "format": "date-time",
+            "title": "Registration Date",
+            "type": "string"
+          },
+          "sex": {
+            "enum": [
+              "male",
+              "female",
+              "other",
+              "unknown"
+            ],
+            "title": "Sex",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "inactive",
+              "deceased"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "_id",
+          "patient_number",
+          "display_name",
+          "date_of_birth",
+          "sex",
+          "status",
+          "phones",
+          "registration_date",
+          "version"
+        ],
+        "title": "PatientListItem",
+        "type": "object"
+      },
+      "PatientListResponse": {
+        "description": "One cursor page of patients.",
+        "properties": {
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "patients": {
+            "items": {
+              "$ref": "#/components/schemas/PatientListItem"
+            },
+            "title": "Patients",
+            "type": "array"
+          }
+        },
+        "required": [
+          "patients"
+        ],
+        "title": "PatientListResponse",
+        "type": "object"
+      },
+      "PatientNameSchema": {
+        "description": "A patient's name in requests and responses.",
+        "properties": {
+          "family": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Family",
+            "type": "string"
+          },
+          "given": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Given",
+            "type": "array"
+          },
+          "other": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Other"
+          }
+        },
+        "required": [
+          "given",
+          "family"
+        ],
+        "title": "PatientNameSchema",
+        "type": "object"
+      },
+      "PatientResponse": {
+        "description": "A full patient returned by create, get and update.",
+        "properties": {
+          "_id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PatientAddressSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "age_years": {
+            "title": "Age Years",
+            "type": "integer"
+          },
+          "care_team": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Care Team",
+            "type": "array"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "date_of_birth": {
+            "format": "date",
+            "title": "Date Of Birth",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "dob_approximate": {
+            "title": "Dob Approximate",
+            "type": "boolean"
+          },
+          "last_visit_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Visit Date"
+          },
+          "legacy_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legacy Number"
+          },
+          "name": {
+            "$ref": "#/components/schemas/PatientNameSchema"
+          },
+          "next_of_kin": {
+            "items": {
+              "$ref": "#/components/schemas/NextOfKinSchema"
+            },
+            "title": "Next Of Kin",
+            "type": "array"
+          },
+          "paper_file": {
+            "title": "Paper File",
+            "type": "boolean"
+          },
+          "patient_number": {
+            "title": "Patient Number",
+            "type": "string"
+          },
+          "payer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PayerSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "phones": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Phones",
+            "type": "array"
+          },
+          "registration_date": {
+            "format": "date-time",
+            "title": "Registration Date",
+            "type": "string"
+          },
+          "sex": {
+            "enum": [
+              "male",
+              "female",
+              "other",
+              "unknown"
+            ],
+            "title": "Sex",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "inactive",
+              "deceased"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "_id",
+          "tenant_id",
+          "patient_number",
+          "status",
+          "name",
+          "date_of_birth",
+          "dob_approximate",
+          "sex",
+          "phones",
+          "next_of_kin",
+          "registration_date",
+          "care_team",
+          "paper_file",
+          "display_name",
+          "age_years",
+          "version"
+        ],
+        "title": "PatientResponse",
+        "type": "object"
+      },
+      "PatientUpdate": {
+        "additionalProperties": false,
+        "description": "Editable patient fields for ``PATCH /patients/:id``.",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PatientAddressSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PatientNameSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next_of_kin": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/NextOfKinSchema"
+                },
+                "maxItems": 5,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Of Kin"
+          },
+          "paper_file": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paper File"
+          },
+          "payer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PayerSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "phones": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 5,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phones"
+          }
+        },
+        "title": "PatientUpdate",
+        "type": "object"
+      },
+      "PayerSchema": {
+        "description": "A patient's payer details.",
+        "properties": {
+          "member_number": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Member Number"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 150,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "scheme": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheme"
+          }
+        },
+        "title": "PayerSchema",
         "type": "object"
       },
       "ReadyHealth": {
@@ -1101,6 +1756,301 @@
         "summary": "Ready",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/v1/patients": {
+      "get": {
+        "description": "List the caller tenant's patients with status/date filters.",
+        "operationId": "get_patients_api_v1_patients_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "active",
+                    "inactive",
+                    "deceased"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "registered_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Registered From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "registered_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Registered To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "-registration_date",
+              "enum": [
+                "registration_date",
+                "-registration_date",
+                "name",
+                "-name"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Patients",
+        "tags": [
+          "patients"
+        ]
+      },
+      "post": {
+        "description": "Register a patient and allocate the tenant's next patient number.",
+        "operationId": "create_patient_api_v1_patients_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/PatientResponse"
+                  },
+                  "title": "Response Create Patient Api V1 Patients Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Patient",
+        "tags": [
+          "patients"
+        ]
+      }
+    },
+    "/api/v1/patients/{patient_id}": {
+      "get": {
+        "description": "Return one patient from the caller's tenant.",
+        "operationId": "get_patient_by_id_api_v1_patients__patient_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "title": "Patient Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/PatientResponse"
+                  },
+                  "title": "Response Get Patient By Id Api V1 Patients  Patient Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Patient By Id",
+        "tags": [
+          "patients"
+        ]
+      },
+      "patch": {
+        "description": "Update editable demographics with an ``If-Match`` version check.",
+        "operationId": "patch_patient_api_v1_patients__patient_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/PatientResponse"
+                  },
+                  "title": "Response Patch Patient Api V1 Patients  Patient Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Patient",
+        "tags": [
+          "patients"
         ]
       }
     },
