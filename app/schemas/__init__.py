@@ -4,6 +4,13 @@ from app.schemas.auth import LoginRequest, LoginResponse, LoginUser, MeResponse,
 from app.schemas.base import BaseSchema, StrictBaseModel
 from app.schemas.envelope import ErrorDetail, error_envelope, success_envelope
 from app.schemas.identity import IdentityResponse, NameSchema
+from app.schemas.patient import (
+    PatientCreate,
+    PatientListItem,
+    PatientListResponse,
+    PatientResponse,
+    PatientUpdate,
+)
 from app.schemas.role import RoleResponse
 from app.schemas.session import SessionResponse
 from app.schemas.tenant import TenantProfileResponse
@@ -20,6 +27,11 @@ __all__ = [
     "MeResponse",
     "MeUser",
     "NameSchema",
+    "PatientCreate",
+    "PatientListItem",
+    "PatientListResponse",
+    "PatientResponse",
+    "PatientUpdate",
     "RoleResponse",
     "SessionResponse",
     "StrictBaseModel",
