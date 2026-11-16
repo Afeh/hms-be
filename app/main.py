@@ -56,7 +56,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         docs_url="/docs",
         openapi_url="/openapi.json",
     )
-    app.add_middleware(MaxBodySizeMiddleware, max_bytes=settings.max_request_body_bytes)
+    app.add_middleware(
+        MaxBodySizeMiddleware,
+        max_bytes=settings.max_request_body_bytes,
+        path_suffix_limits={"/attachments": settings.storage_max_image_bytes + 1_048_576},
+    )
     app.add_middleware(SecurityHeadersMiddleware, environment=settings.environment)
     app.add_middleware(RequestContextMiddleware)
     if settings.cors_origins:
