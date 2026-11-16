@@ -109,6 +109,7 @@ DEFAULT_ROLE_TEMPLATES: tuple[RoleTemplate, ...] = (
                 Permission.PATIENT_READ_ALL,
                 Permission.VISIT_CREATE,
                 Permission.VISIT_READ,
+                Permission.VISIT_UPDATE,
                 Permission.VISIT_CLOSE,
                 Permission.VITALS_WRITE,
                 Permission.USER_MANAGE,
