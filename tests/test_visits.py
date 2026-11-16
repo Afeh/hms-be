@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import uuid
 from collections.abc import AsyncIterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
 import pytest
@@ -20,11 +20,18 @@ from app.db.identities import IdentityRepository, normalize_email
 from app.db.indexes import (
     create_indexes,
     create_patient_indexes,
+    create_visit_attachment_indexes,
     create_visit_indexes,
 )
 from app.main import create_app
 from app.models.identity import Identity, PersonName
 from app.services.sessions import create_session
+from app.services.storage import (
+    PresignedDownload,
+    PresignedUpload,
+    Storage,
+    StoredObject,
+)
 
 MONGODB_URI = os.environ.get("MONGODB_URI")
 PASSWORD = "Password123!"
@@ -50,6 +57,7 @@ async def registry() -> AsyncIterator[TenantConnectionRegistry]:
     await create_indexes(connection.database)
     await create_patient_indexes(connection.database)
     await create_visit_indexes(connection.database)
+    await create_visit_attachment_indexes(connection.database)
     try:
         yield connection
     finally:
@@ -126,6 +134,8 @@ async def _account(
                 "visit:update",
                 "visit:close",
                 "vitals:write",
+                "document:capture",
+                "document:read",
             ],
             "is_system": False,
             "mfa_required": False,
@@ -165,12 +175,47 @@ def _headers(account: dict[str, str]) -> dict[str, str]:
     return {"Authorization": f"Bearer {account['access_token']}"}
 
 
-async def _client(registry: TenantConnectionRegistry) -> AsyncIterator[AsyncClient]:
+class FakeStorage:
+    """An in-memory stand-in for R2 so the route flow is tested without network."""
+
+    def __init__(self) -> None:
+        self.objects: dict[str, StoredObject] = {}
+        self.last_upload_key: str | None = None
+        self.deleted_keys: list[str] = []
+
+    async def presign_upload(self, *, key: str, content_type: str) -> PresignedUpload:
+        self.last_upload_key = key
+        return PresignedUpload(
+            url=f"https://r2.test/upload/{key}",
+            headers={"Content-Type": content_type},
+            expires_at=datetime.now(UTC) + timedelta(minutes=5),
+        )
+
+    async def presign_download(self, *, key: str) -> PresignedDownload:
+        return PresignedDownload(
+            url=f"https://r2.test/download/{key}",
+            expires_at=datetime.now(UTC) + timedelta(minutes=5),
+        )
+
+    async def head_object(self, *, key: str) -> StoredObject | None:
+        return self.objects.get(key)
+
+    async def delete_object(self, *, key: str) -> None:
+        self.deleted_keys.append(key)
+        self.objects.pop(key, None)
+
+
+async def _client(
+    registry: TenantConnectionRegistry,
+    storage: Storage | None = None,
+) -> AsyncIterator[AsyncClient]:
     app = create_app(_settings(registry.database.name))
     async with (
         LifespanManager(app),
         AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client,
     ):
+        if storage is not None:
+            app.state.storage = storage
         yield client
 
 
@@ -541,3 +586,138 @@ async def test_seed_creates_sample_visits_and_vitals(
         assert seed() == 0
     assert await db["visits"].count_documents({}) == 6
     assert await db["vital_signs"].count_documents({}) == 6
+
+
+async def test_visit_images_use_direct_r2_uploads_and_are_verified(
+    registry: TenantConnectionRegistry,
+) -> None:
+    account = await _account(registry)
+    storage = FakeStorage()
+    async for client in _client(registry, storage):
+        patient = await _create_patient(client, account)
+        visit = await _create_visit(client, account, patient["_id"])
+        visit_id = visit["_id"]
+
+        created = await client.post(
+            f"/api/v1/visits/{visit_id}/attachments",
+            json={
+                "filename": "ward-round.JPG",
+                "content_type": "image/jpeg",
+                "size_bytes": 5,
+                "caption": "Wound on left forearm",
+            },
+            headers=_headers(account),
+        )
+        assert created.status_code == 201, created.text
+        attachment = created.json()["data"]["attachment"]
+        attachment_id = attachment["_id"]
+        assert attachment["filename"] == "ward-round.JPG"
+        assert attachment["status"] == "pending"
+        assert attachment["upload"]["method"] == "PUT"
+        assert attachment["upload"]["headers"] == {"Content-Type": "image/jpeg"}
+        assert storage.last_upload_key is not None
+        assert storage.last_upload_key.startswith(
+            f"t/{account['tenant_id']}/patients/{patient['_id']}/visits/{visit_id}/attachments/"
+        )
+
+        too_early = await client.post(
+            f"/api/v1/visits/{visit_id}/attachments/{attachment_id}/complete",
+            headers=_headers(account),
+        )
+        assert too_early.status_code == 409
+        assert too_early.json()["data"]["code"] == "object_not_found"
+
+        storage.objects[storage.last_upload_key] = StoredObject(
+            size_bytes=5,
+            content_type="image/jpeg",
+            etag="abc123",
+        )
+        completed = await client.post(
+            f"/api/v1/visits/{visit_id}/attachments/{attachment_id}/complete",
+            headers=_headers(account),
+        )
+        assert completed.status_code == 200, completed.text
+        completed_attachment = completed.json()["data"]["attachment"]
+        assert completed_attachment["status"] == "uploaded"
+        assert completed_attachment["version"] == 2
+        assert completed_attachment["uploaded_by"] == account["user_id"]
+        assert completed_attachment["download_url"].startswith("https://r2.test/download/")
+        assert completed_attachment["upload"] is None
+
+        listed = await client.get(
+            f"/api/v1/visits/{visit_id}/attachments",
+            headers=_headers(account),
+        )
+        assert listed.status_code == 200, listed.text
+        assert [row["_id"] for row in listed.json()["data"]["attachments"]] == [attachment_id]
+
+        fresh_url = await client.get(
+            f"/api/v1/visits/{visit_id}/attachments/{attachment_id}/url",
+            headers=_headers(account),
+        )
+        assert fresh_url.status_code == 200, fresh_url.text
+        assert fresh_url.json()["data"]["download"]["url"].startswith("https://r2.test/download/")
+
+        unsupported = await client.post(
+            f"/api/v1/visits/{visit_id}/attachments",
+            json={"filename": "scan.pdf", "content_type": "application/pdf", "size_bytes": 5},
+            headers=_headers(account),
+        )
+        assert unsupported.status_code == 415
+        assert unsupported.json()["data"]["code"] == "unsupported_media_type"
+
+        too_large = await client.post(
+            f"/api/v1/visits/{visit_id}/attachments",
+            json={
+                "filename": "huge.jpg",
+                "content_type": "image/jpeg",
+                "size_bytes": 10 * 1024 * 1024 + 1,
+            },
+            headers=_headers(account),
+        )
+        assert too_large.status_code == 413
+        assert too_large.json()["data"]["code"] == "image_too_large"
+
+        mismatch = await client.post(
+            f"/api/v1/visits/{visit_id}/attachments",
+            json={"filename": "wrong.jpg", "content_type": "image/jpeg", "size_bytes": 4},
+            headers=_headers(account),
+        )
+        assert mismatch.status_code == 201, mismatch.text
+        mismatch_id = mismatch.json()["data"]["attachment"]["_id"]
+        assert storage.last_upload_key is not None
+        mismatched_key = storage.last_upload_key
+        storage.objects[mismatched_key] = StoredObject(
+            size_bytes=5,
+            content_type="image/jpeg",
+            etag="def456",
+        )
+        rejected = await client.post(
+            f"/api/v1/visits/{visit_id}/attachments/{mismatch_id}/complete",
+            headers=_headers(account),
+        )
+        assert rejected.status_code == 422, rejected.text
+        assert rejected.json()["data"]["code"] == "size_mismatch"
+        assert mismatched_key in storage.deleted_keys
+
+        after_rejection = await client.get(
+            f"/api/v1/visits/{visit_id}/attachments",
+            headers=_headers(account),
+        )
+        assert [row["_id"] for row in after_rejection.json()["data"]["attachments"]] == [
+            attachment_id
+        ]
+
+        closed = await client.post(
+            f"/api/v1/visits/{visit_id}/close",
+            json={"force": False},
+            headers={**_headers(account), "If-Match": '"1"'},
+        )
+        assert closed.status_code == 200, closed.text
+        rejected_after_close = await client.post(
+            f"/api/v1/visits/{visit_id}/attachments",
+            json={"filename": "late.jpg", "content_type": "image/jpeg", "size_bytes": 5},
+            headers=_headers(account),
+        )
+        assert rejected_after_close.status_code == 409
+        assert rejected_after_close.json()["data"]["code"] == "visit_not_open"
