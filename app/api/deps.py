@@ -1,10 +1,12 @@
 """Process-wide resources and the authenticated-request dependency (issue 0017).
 
-``get_bearer_token`` is the only place the ``Authorization`` header is read.
-``get_current_user`` turns it into a ``CurrentUser`` and populates the request
-context; every protected route then works from that context or from the returned
-object. Permissions are read from the tenant roles on every request (the sprint
-does not use a Redis permission cache).
+``get_bearer_token`` is the only place the ``Authorization`` header is read. It
+falls back to the HttpOnly access-token cookie so browser clients authenticate
+without exposing tokens to JavaScript. ``get_current_user`` turns that token into
+a ``CurrentUser`` and populates the request context; every protected route then
+works from that context or from the returned object. Permissions are read from
+the tenant roles on every request (the sprint does not use a Redis permission
+cache).
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ from redis.asyncio import Redis
 
 from app.core.config import Settings
 from app.core.context import RequestContext, get_context, set_context
+from app.core.cookies import ACCESS_TOKEN_COOKIE
 from app.core.errors import ApiError
 from app.core.permissions import ALL_PERMISSIONS, validate_permission
 from app.core.security import TokenValidationError, decode_access_token
@@ -79,15 +82,24 @@ def get_storage(request: Request) -> Storage:
     return storage
 
 
-def get_bearer_token(request: Request) -> str:
-    """Read the one header authentication is allowed to read."""
+def get_optional_bearer_token(request: Request) -> str | None:
+    """Read the access token from the header, falling back to the cookie jar."""
     authorization = request.headers.get("authorization")
-    if not authorization:
+    if authorization:
+        scheme, _, token = authorization.partition(" ")
+        if scheme.lower() != "bearer" or not token.strip():
+            raise ApiError(401, "invalid_or_expired_token", "Bearer token is malformed")
+        return token.strip()
+    cookie = request.cookies.get(ACCESS_TOKEN_COOKIE)
+    return cookie or None
+
+
+def get_bearer_token(request: Request) -> str:
+    """Require an access token from the Authorization header or auth cookie."""
+    token = get_optional_bearer_token(request)
+    if token is None:
         raise ApiError(401, "unauthenticated", "Authentication is required")
-    scheme, _, token = authorization.partition(" ")
-    if scheme.lower() != "bearer" or not token.strip():
-        raise ApiError(401, "invalid_or_expired_token", "Bearer token is malformed")
-    return token.strip()
+    return token
 
 
 async def get_current_user(
@@ -188,6 +200,7 @@ __all__ = [
     "get_app_settings",
     "get_bearer_token",
     "get_current_user",
+    "get_optional_bearer_token",
     "get_redis",
     "get_registry",
     "get_storage",
