@@ -73,48 +73,6 @@
         "title": "AiConfigResponse",
         "type": "object"
       },
-      "AttachmentCreate": {
-        "additionalProperties": false,
-        "description": "Ask the API for a direct-upload URL for one image.",
-        "properties": {
-          "caption": {
-            "anyOf": [
-              {
-                "maxLength": 500,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Caption"
-          },
-          "content_type": {
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Content Type",
-            "type": "string"
-          },
-          "filename": {
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Filename",
-            "type": "string"
-          },
-          "size_bytes": {
-            "exclusiveMinimum": 0.0,
-            "title": "Size Bytes",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "filename",
-          "content_type",
-          "size_bytes"
-        ],
-        "title": "AttachmentCreate",
-        "type": "object"
-      },
       "AttachmentListResponse": {
         "description": "One cursor page of images attached to a visit.",
         "properties": {
@@ -220,16 +178,6 @@
             "title": "Status",
             "type": "string"
           },
-          "upload": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PresignedUploadSchema"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "uploaded_at": {
             "anyOf": [
               {
@@ -273,6 +221,33 @@
           "version"
         ],
         "title": "AttachmentResponse",
+        "type": "object"
+      },
+      "Body_upload_visit_attachment_api_v1_visits__visit_id__attachments_post": {
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "Image file to attach to the visit",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_visit_attachment_api_v1_visits__visit_id__attachments_post",
         "type": "object"
       },
       "BrandingConfigResponse": {
@@ -1483,40 +1458,6 @@
           }
         },
         "title": "PayerSchema",
-        "type": "object"
-      },
-      "PresignedUploadSchema": {
-        "description": "Everything the client needs to PUT the image directly to R2.",
-        "properties": {
-          "expires_at": {
-            "format": "date-time",
-            "title": "Expires At",
-            "type": "string"
-          },
-          "headers": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "title": "Headers",
-            "type": "object"
-          },
-          "method": {
-            "const": "PUT",
-            "default": "PUT",
-            "title": "Method",
-            "type": "string"
-          },
-          "url": {
-            "title": "Url",
-            "type": "string"
-          }
-        },
-        "required": [
-          "url",
-          "headers",
-          "expires_at"
-        ],
-        "title": "PresignedUploadSchema",
         "type": "object"
       },
       "ReadyHealth": {
@@ -3598,8 +3539,8 @@
         ]
       },
       "post": {
-        "description": "Create a pending attachment and return its short-lived R2 upload URL.",
-        "operationId": "create_visit_attachment_api_v1_visits__visit_id__attachments_post",
+        "description": "Upload an image through the API and attach it to an open visit.",
+        "operationId": "upload_visit_attachment_api_v1_visits__visit_id__attachments_post",
         "parameters": [
           {
             "in": "path",
@@ -3613,9 +3554,9 @@
         ],
         "requestBody": {
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/AttachmentCreate"
+                "$ref": "#/components/schemas/Body_upload_visit_attachment_api_v1_visits__visit_id__attachments_post"
               }
             }
           },
@@ -3629,7 +3570,7 @@
                   "additionalProperties": {
                     "$ref": "#/components/schemas/AttachmentResponse"
                   },
-                  "title": "Response Create Visit Attachment Api V1 Visits  Visit Id  Attachments Post",
+                  "title": "Response Upload Visit Attachment Api V1 Visits  Visit Id  Attachments Post",
                   "type": "object"
                 }
               }
@@ -3647,63 +3588,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Create Visit Attachment",
-        "tags": [
-          "visit attachments"
-        ]
-      }
-    },
-    "/api/v1/visits/{visit_id}/attachments/{attachment_id}/complete": {
-      "post": {
-        "description": "Verify the uploaded object and mark the attachment as readable.",
-        "operationId": "complete_visit_attachment_api_v1_visits__visit_id__attachments__attachment_id__complete_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "visit_id",
-            "required": true,
-            "schema": {
-              "title": "Visit Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "attachment_id",
-            "required": true,
-            "schema": {
-              "title": "Attachment Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "$ref": "#/components/schemas/AttachmentResponse"
-                  },
-                  "title": "Response Complete Visit Attachment Api V1 Visits  Visit Id  Attachments  Attachment Id  Complete Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Complete Visit Attachment",
+        "summary": "Upload Visit Attachment",
         "tags": [
           "visit attachments"
         ]
@@ -3711,7 +3596,7 @@
     },
     "/api/v1/visits/{visit_id}/attachments/{attachment_id}/url": {
       "get": {
-        "description": "Return a fresh short-lived download URL for a completed upload.",
+        "description": "Return a fresh short-lived download URL for an uploaded image.",
         "operationId": "get_visit_attachment_url_api_v1_visits__visit_id__attachments__attachment_id__url_get",
         "parameters": [
           {
