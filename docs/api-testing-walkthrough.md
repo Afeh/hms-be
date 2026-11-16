@@ -6,7 +6,8 @@ Use this with Swagger at `http://127.0.0.1:8000/docs` or with curl.
 - Base URL: `http://127.0.0.1:8000`
 - API prefix: `/api/v1`
 - Demo account: `admin@acme.example` / `Password123!`
-- Protected endpoints need: `Authorization: Bearer <access_token>`
+- Protected endpoints need `Authorization: Bearer <access_token>` or the
+  `hms_access_token` cookie
 - IDs in URLs are Mongo `_id` values, **not** `patient_number` values.
 
 ## Values to capture as you go
@@ -40,13 +41,35 @@ No auth required.
 }
 ```
 
-Copy `data.access_token` into the Swagger **Authorize** dialog as a bearer token, or add it to every request below.
+Copy `data.access_token` into the Swagger **Authorize** dialog as a bearer token,
+or add it to every request below.
+
+Login also sets two HttpOnly cookies: `hms_access_token` for API requests and
+`hms_refresh_token` for rotation. A browser using a cookie jar can call protected
+routes without the `Authorization` header. Keep using the bearer token in Swagger
+if its cookie jar is not enabled.
 
 ### `GET /api/v1/auth/me`
 
-No body. Requires the bearer token.
+No body. Requires the bearer token or access cookie.
 
 Use `data.user._id` as `{admin_user_id}` for the visit body below.
+
+### `POST /api/v1/auth/refresh`
+
+No body required when the refresh cookie is present. Non-browser clients may send:
+
+```json
+{ "refresh_token": "rt_..." }
+```
+
+The old refresh token is invalid immediately. The response contains a rotated
+pair and replaces both cookies.
+
+### `POST /api/v1/auth/logout`
+
+No body. Revokes the current session when the access or refresh token identifies
+it, then expires both cookies. It returns success even if no session matched.
 
 ---
 
@@ -409,6 +432,8 @@ the default size limit is 10 MiB. An unsupported type returns `415`
 | 21 | `POST /api/v1/visits/{visit_id}/attachments/{attachment_id}/complete` | — |
 | 22 | `GET /api/v1/visits/{visit_id}/attachments` | — |
 | 23 | `GET /api/v1/visits/{visit_id}/attachments/{attachment_id}/url` | — |
+| 24 | `POST /api/v1/auth/refresh` | Optional refresh-token body |
+| 25 | `POST /api/v1/auth/logout` | — |
 
 ## Common test order
 
@@ -423,3 +448,4 @@ the default size limit is 10 MiB. An unsupported type returns `415`
 9. Optionally mark a vitals row entered in error.
 10. Patch the patient and visit with their current ETags.
 11. Close the visit with its current ETag.
+12. Optionally call `/auth/refresh` for a rotated pair, then `/auth/logout`.
