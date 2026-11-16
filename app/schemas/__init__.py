@@ -1,11 +1,9 @@
 """Pydantic models shared across modules: the response envelope and errors."""
 
 from app.schemas.attachment import (
-    AttachmentCreate,
     AttachmentListResponse,
     AttachmentResponse,
     DownloadUrlSchema,
-    PresignedUploadSchema,
 )
 from app.schemas.auth import (
     LoginRequest,
@@ -47,7 +45,6 @@ from app.schemas.vitals import (
 )
 
 __all__ = [
-    "AttachmentCreate",
     "AttachmentListResponse",
     "AttachmentResponse",
     "BaseSchema",
@@ -66,7 +63,6 @@ __all__ = [
     "PatientListResponse",
     "PatientResponse",
     "PatientUpdate",
-    "PresignedUploadSchema",
     "RefreshRequest",
     "RefreshResponse",
     "RoleResponse",
