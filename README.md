@@ -60,6 +60,33 @@ uv run celery -A app.worker beat -l info      # scheduled queues
   installed routes, so commit it and regenerate it with
   `uv run python scripts/export_openapi.py` whenever a route changes.
 
+## Browser sessions (cookies)
+
+`POST /api/v1/auth/login` returns the token pair in JSON and also sets two
+HttpOnly cookies: `hms_access_token` and `hms_refresh_token`. Authenticated
+routes accept either `Authorization: Bearer <token>` or the access cookie, so a
+browser client can omit the header entirely.
+
+- `POST /api/v1/auth/refresh` rotates the pair using the refresh cookie and
+  replaces both cookies. Non-browser clients may send
+  `{"refresh_token": "rt_..."}` in the body instead.
+- `POST /api/v1/auth/logout` revokes the session when it can identify one and
+  expires both cookies.
+- The refresh cookie is capped by the session's absolute lifetime (8 hours by
+  default), not just the 30-day refresh-token TTL.
+
+Cookie settings:
+
+```bash
+# AUTH_COOKIE_SECURE=true     # default: off locally, on in staging/production
+AUTH_COOKIE_SAMESITE=lax      # use none + secure for a cross-site frontend
+# AUTH_COOKIE_DOMAIN=
+```
+
+For a browser frontend, enable CORS credentials on the server and send requests
+with `credentials: "include"` (fetch) or `withCredentials: true` (Axios). With
+`SameSite=None`, HTTPS and `AUTH_COOKIE_SECURE=true` are required.
+
 ## Seeding (local development)
 
 Apply migrations and seed initial tenants for local development and login:
