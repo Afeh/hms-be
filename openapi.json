@@ -584,6 +584,18 @@
         "title": "LoginUser",
         "type": "object"
       },
+      "LogoutResponse": {
+        "description": "The sign-out result; cookies are cleared even when no session matched.",
+        "properties": {
+          "signed_out": {
+            "default": true,
+            "title": "Signed Out",
+            "type": "boolean"
+          }
+        },
+        "title": "LogoutResponse",
+        "type": "object"
+      },
       "MeResponse": {
         "description": "The caller's profile, effective permissions and tenant.",
         "properties": {
@@ -1526,6 +1538,56 @@
           "dependencies"
         ],
         "title": "ReadyHealth",
+        "type": "object"
+      },
+      "RefreshRequest": {
+        "description": "Optional body for non-browser clients; browser clients use the cookie.",
+        "properties": {
+          "refresh_token": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresh Token"
+          }
+        },
+        "title": "RefreshRequest",
+        "type": "object"
+      },
+      "RefreshResponse": {
+        "description": "A rotated token pair returned by ``POST /auth/refresh``.",
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "expires_in": {
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "refresh_expires_at": {
+            "format": "date-time",
+            "title": "Refresh Expires At",
+            "type": "string"
+          },
+          "refresh_token": {
+            "title": "Refresh Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "access_token",
+          "expires_in",
+          "refresh_token",
+          "refresh_expires_at"
+        ],
+        "title": "RefreshResponse",
         "type": "object"
       },
       "RetentionConfigResponse": {
@@ -2548,6 +2610,28 @@
         ]
       }
     },
+    "/api/v1/auth/logout": {
+      "post": {
+        "description": "Revoke the current session when possible, then expire both auth cookies.",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoutResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/me": {
       "get": {
         "description": "Return the authenticated caller's profile, roles and permissions.",
@@ -2565,6 +2649,55 @@
           }
         },
         "summary": "Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "description": "Rotate the refresh token from its cookie (or body) and reset both cookies.",
+        "operationId": "refresh_api_v1_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RefreshRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refresh",
         "tags": [
           "auth"
         ]
