@@ -23,6 +23,7 @@ from app.core.middleware import (
 )
 from app.db import TenantConnectionRegistry
 from app.db.cache import create_redis
+from app.services.storage import R2Storage
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             timeout_ms=settings.mongodb_server_selection_timeout_ms,
         )
         app.state.redis = create_redis(settings.redis_url)
+        app.state.storage = R2Storage(settings)
         logger.info("api started", extra={"environment": settings.environment})
         try:
             yield

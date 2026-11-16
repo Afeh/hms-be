@@ -62,6 +62,27 @@ class Settings(BaseSettings):
     rate_limit_invitation: int = 10
     rate_limit_signup: int = 5
 
+    # Cloudflare R2 / S3-compatible object storage. Empty credentials keep the
+    # API bootable; attachment endpoints return 503 until they are configured.
+    storage_endpoint: str | None = None
+    storage_bucket: str | None = None
+    storage_access_key: str | None = None
+    storage_secret_key: str | None = None
+    storage_region: str = "auto"
+    storage_presign_ttl_seconds: int = 300
+    storage_max_image_bytes: int = 10 * 1024 * 1024
+
+    @property
+    def storage_configured(self) -> bool:
+        return all(
+            (
+                self.storage_endpoint,
+                self.storage_bucket,
+                self.storage_access_key,
+                self.storage_secret_key,
+            )
+        )
+
     @property
     def broker_url(self) -> str:
         """Celery broker, defaulting to the Redis instance already configured."""

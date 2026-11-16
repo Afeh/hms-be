@@ -36,6 +36,7 @@ from app.models.session import Session
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.services.sessions import touch_session_if_stale
+from app.services.storage import Storage
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +72,11 @@ def get_tenant_store(request: Request) -> TenantStore:
 
 def get_tenant_config_store(request: Request) -> TenantConfigStore:
     return TenantConfigStore(get_registry(request))
+
+
+def get_storage(request: Request) -> Storage:
+    storage: Storage = request.app.state.storage
+    return storage
 
 
 def get_bearer_token(request: Request) -> str:
@@ -184,6 +190,7 @@ __all__ = [
     "get_current_user",
     "get_redis",
     "get_registry",
+    "get_storage",
     "get_tenant_config_store",
     "get_tenant_store",
     "require_permission",
