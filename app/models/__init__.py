@@ -19,6 +19,8 @@ from app.models.session import Session
 from app.models.tenant import Tenant
 from app.models.tenant_config import TenantConfig
 from app.models.user import ProfessionalProfile, User
+from app.models.visit import Visit
+from app.models.vital_signs import VitalSigns, VitalWarning
 
 __all__ = [
     "Counter",
@@ -38,4 +40,7 @@ __all__ = [
     "Tenant",
     "TenantConfig",
     "User",
+    "Visit",
+    "VitalSigns",
+    "VitalWarning",
 ]
