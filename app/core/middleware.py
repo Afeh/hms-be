@@ -12,11 +12,12 @@ SecurityHeadersMiddleware
     the ``Strict-Transport-Security`` header is also added.
 
 MaxBodySizeMiddleware
-    Rejects requests whose body exceeds ``max_bytes`` with a 413 response
+    Rejects requests whose body exceeds the default limit with a 413 response
     before any body bytes are forwarded to the application, protecting against
-    large-payload denial-of-service attacks.  The limit is enforced by reading
-    the ``Content-Length`` header first; for chunked / streaming bodies the
-    bytes are counted as they arrive and the connection is aborted early.
+    large-payload denial-of-service attacks. Path suffixes can opt into a larger
+    limit, as multipart image uploads do. The limit is enforced by reading the
+    ``Content-Length`` header first; for chunked / streaming bodies the bytes
+    are counted as they arrive and the connection is aborted early.
 
 All three are pure ASGI middlewares (not ``BaseHTTPMiddleware``) so they run
 in the same asyncio task as the endpoint and don't interfere with ContextVars.
@@ -113,8 +114,10 @@ def _payload_too_large_response(max_bytes: int) -> tuple[dict[str, object], dict
 
 
 class MaxBodySizeMiddleware:
-    """Reject HTTP requests whose body exceeds ``max_bytes``.
+    """Reject HTTP requests whose body exceeds the applicable limit.
 
+    * The default limit applies unless the request path ends with one of
+      ``path_suffix_limits``; those paths use their configured limit instead.
     * If ``Content-Length`` is present and already over the limit, the request
       is rejected immediately with 413 without reading any body bytes.
     * For chunked / streaming bodies, bytes are counted as they arrive;
@@ -122,14 +125,29 @@ class MaxBodySizeMiddleware:
       is raised so FastAPI's exception handler renders the standard 413 envelope.
     """
 
-    def __init__(self, app: ASGIApp, *, max_bytes: int) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        max_bytes: int,
+        path_suffix_limits: dict[str, int] | None = None,
+    ) -> None:
         self.app = app
         self.max_bytes = max_bytes
+        self.path_suffix_limits = path_suffix_limits or {}
+
+    def _limit_for(self, path: str) -> int:
+        for suffix, limit in self.path_suffix_limits.items():
+            if path.endswith(suffix):
+                return limit
+        return self.max_bytes
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
+
+        limit = self._limit_for(str(scope.get("path", "")))
 
         # Fast path: reject based on Content-Length header alone.
         headers = dict(scope.get("headers", []))
@@ -139,8 +157,8 @@ class MaxBodySizeMiddleware:
                 content_length = int(content_length_raw)
             except ValueError:
                 content_length = 0
-            if content_length > self.max_bytes:
-                start, body_msg = _payload_too_large_response(self.max_bytes)
+            if content_length > limit:
+                start, body_msg = _payload_too_large_response(limit)
                 await send(start)
                 await send(body_msg)
                 return
@@ -154,11 +172,11 @@ class MaxBodySizeMiddleware:
             if message["type"] == "http.request":
                 chunk: bytes = message.get("body", b"")
                 total_received += len(chunk)
-                if total_received > self.max_bytes:
+                if total_received > limit:
                     raise ApiError(
                         413,
                         "payload_too_large",
-                        f"Request body exceeds the {self.max_bytes}-byte limit",
+                        f"Request body exceeds the {limit}-byte limit",
                     )
             return message
 
