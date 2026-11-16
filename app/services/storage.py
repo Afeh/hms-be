@@ -1,9 +1,7 @@
 """Private object storage for visit attachments (Cloudflare R2 / S3-compatible).
 
-The API never proxies image bytes. It creates a small metadata record, returns a
-short-lived presigned ``PUT`` URL, then verifies the uploaded object with a
-``HEAD`` request before marking the attachment usable. Reads likewise return
-short-lived presigned ``GET`` URLs.
+Image bytes are accepted by the API and written to the bucket from the server.
+Reads return short-lived presigned ``GET`` URLs, so the bucket stays private.
 
 Credentials are optional at boot. Calling one of these methods without complete
 R2 settings raises :class:`StorageUnavailableError`, which the attachment service
@@ -29,15 +27,6 @@ class StorageUnavailableError(RuntimeError):
 
 
 @dataclass(frozen=True, slots=True)
-class PresignedUpload:
-    """A short-lived direct-upload instruction for one object."""
-
-    url: str
-    headers: dict[str, str]
-    expires_at: datetime
-
-
-@dataclass(frozen=True, slots=True)
 class PresignedDownload:
     """A short-lived direct-download URL for one object."""
 
@@ -45,28 +34,18 @@ class PresignedDownload:
     expires_at: datetime
 
 
-@dataclass(frozen=True, slots=True)
-class StoredObject:
-    """The metadata the provider reports for an uploaded object."""
-
-    size_bytes: int
-    content_type: str | None
-    etag: str | None
-
-
 class Storage(Protocol):
     """The operations the attachment service needs from object storage."""
 
-    async def presign_upload(
+    async def upload_object(
         self,
         *,
         key: str,
         content_type: str,
-    ) -> PresignedUpload: ...
+        data: bytes,
+    ) -> str | None: ...
 
     async def presign_download(self, *, key: str) -> PresignedDownload: ...
-
-    async def head_object(self, *, key: str) -> StoredObject | None: ...
 
     async def delete_object(self, *, key: str) -> None: ...
 
@@ -104,31 +83,26 @@ class R2Storage:
             raise StorageUnavailableError("Object storage is not configured")
         return bucket
 
-    async def presign_upload(
+    async def upload_object(
         self,
         *,
         key: str,
         content_type: str,
-    ) -> PresignedUpload:
-        ttl = self._settings.storage_presign_ttl_seconds
+        data: bytes,
+    ) -> str | None:
         try:
-            url = await asyncio.to_thread(
-                self._client().generate_presigned_url,
-                ClientMethod="put_object",
-                Params={
-                    "Bucket": self._bucket(),
-                    "Key": key,
-                    "ContentType": content_type,
-                },
-                ExpiresIn=ttl,
+            response = await asyncio.to_thread(
+                self._client().put_object,
+                Bucket=self._bucket(),
+                Key=key,
+                Body=data,
+                ContentType=content_type,
+                ContentLength=len(data),
             )
         except (BotoCoreError, ClientError) as exc:
-            raise StorageUnavailableError("Object storage could not sign the upload") from exc
-        return PresignedUpload(
-            url=url,
-            headers={"Content-Type": content_type},
-            expires_at=datetime.now(UTC) + timedelta(seconds=ttl),
-        )
+            raise StorageUnavailableError("Object storage could not store the image") from exc
+        etag = response.get("ETag")
+        return str(etag).strip('"') if etag is not None else None
 
     async def presign_download(self, *, key: str) -> PresignedDownload:
         ttl = self._settings.storage_presign_ttl_seconds
@@ -144,32 +118,6 @@ class R2Storage:
         return PresignedDownload(
             url=url,
             expires_at=datetime.now(UTC) + timedelta(seconds=ttl),
-        )
-
-    async def head_object(self, *, key: str) -> StoredObject | None:
-        try:
-            response = await asyncio.to_thread(
-                self._client().head_object,
-                Bucket=self._bucket(),
-                Key=key,
-            )
-        except ClientError as exc:
-            error = exc.response.get("Error", {})
-            code = str(error.get("Code", ""))
-            status = exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
-            if status == 404 or code in {"404", "NoSuchKey", "NotFound"}:
-                return None
-            raise StorageUnavailableError("Object storage could not read the upload") from exc
-        except BotoCoreError as exc:
-            raise StorageUnavailableError("Object storage could not read the upload") from exc
-
-        etag = response.get("ETag")
-        return StoredObject(
-            size_bytes=int(response.get("ContentLength", 0)),
-            content_type=(
-                str(response["ContentType"]) if response.get("ContentType") is not None else None
-            ),
-            etag=str(etag).strip('"') if etag is not None else None,
         )
 
     async def delete_object(self, *, key: str) -> None:
@@ -191,9 +139,7 @@ class R2Storage:
 
 __all__ = [
     "PresignedDownload",
-    "PresignedUpload",
     "R2Storage",
     "Storage",
     "StorageUnavailableError",
-    "StoredObject",
 ]
