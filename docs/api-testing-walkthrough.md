@@ -328,6 +328,60 @@ Marked rows still appear in the patient vitals list but are excluded from the vi
 
 ---
 
+## 7. Visit images (Cloudflare R2)
+
+Requires R2 to be configured. Uploading needs `document:capture`; listing and
+refreshing download URLs need `document:read`. The visit must be open.
+
+### `POST /api/v1/visits/{visit_id}/attachments`
+
+```json
+{
+  "filename": "wound-left-arm.jpg",
+  "content_type": "image/jpeg",
+  "size_bytes": 2483921,
+  "caption": "Wound on left forearm"
+}
+```
+
+Copy `data.attachment._id` as `{attachment_id}` and the `upload` object. Then PUT
+the file directly to R2; do not send the bearer token to the presigned URL:
+
+```bash
+curl -X PUT \
+  -H "Content-Type: image/jpeg" \
+  --upload-file ./wound-left-arm.jpg \
+  "<data.attachment.upload.url>"
+```
+
+The URL and content type must match the values from the create response. The URL
+expires after five minutes by default.
+
+### `POST /api/v1/visits/{visit_id}/attachments/{attachment_id}/complete`
+
+No body. The API checks that the R2 object exists and that its size and content
+type match the declaration. On success the attachment becomes `uploaded` and the
+response includes `download_url`.
+
+If nothing was uploaded, this returns `409 object_not_found`. A size mismatch
+returns `422 size_mismatch` and removes the rejected pending record.
+
+### `GET /api/v1/visits/{visit_id}/attachments`
+
+Optional `limit` (1–100) and `cursor` query parameters. Each pending attachment
+includes a fresh `upload` URL; each uploaded attachment includes a fresh
+`download_url`.
+
+### `GET /api/v1/visits/{visit_id}/attachments/{attachment_id}/url`
+
+No body. Returns a fresh short-lived download URL for an uploaded attachment.
+
+Allowed image types are `image/jpeg`, `image/png`, `image/webp` and `image/heic`;
+the default size limit is 10 MiB. An unsupported type returns `415`
+`unsupported_media_type`; an oversized declaration returns `413 image_too_large`.
+
+---
+
 ## Full endpoint checklist
 
 | # | Method and path | Body |
@@ -351,6 +405,10 @@ Marked rows still appear in the patient vitals list but are excluded from the vi
 | 17 | `POST /api/v1/visits/{visit_id}/close` | `{"force": false}` + `If-Match` |
 | 18 | `POST /api/v1/visits/{visit_id}/vitals` | Vitals body |
 | 19 | `PATCH /api/v1/vitals/{vitals_id}` | Entered-in-error body |
+| 20 | `POST /api/v1/visits/{visit_id}/attachments` | Image declaration body |
+| 21 | `POST /api/v1/visits/{visit_id}/attachments/{attachment_id}/complete` | — |
+| 22 | `GET /api/v1/visits/{visit_id}/attachments` | — |
+| 23 | `GET /api/v1/visits/{visit_id}/attachments/{attachment_id}/url` | — |
 
 ## Common test order
 
@@ -361,6 +419,7 @@ Marked rows still appear in the patient vitals list but are excluded from the vi
 5. Create a visit with the admin user ID.
 6. Record normal vitals, then list them.
 7. Fetch the visit and confirm the vitals are nested.
-8. Patch the patient and visit with their current ETags.
-9. Close the visit with its current ETag.
-10. Optionally mark a vitals row entered in error before closing.
+8. Optionally attach an image: create the upload URL, PUT the file to R2, then complete it.
+9. Optionally mark a vitals row entered in error.
+10. Patch the patient and visit with their current ETags.
+11. Close the visit with its current ETag.
