@@ -88,6 +88,33 @@ class LoginResponse(BaseModel):
     user: LoginUser
 
 
+class RefreshRequest(BaseModel):
+    """Optional body for non-browser clients; browser clients use the cookie."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    refresh_token: str | None = Field(default=None, min_length=1, max_length=512)
+
+
+class RefreshResponse(BaseModel):
+    """A rotated token pair returned by ``POST /auth/refresh``."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    access_token: str
+    expires_in: int
+    refresh_token: str
+    refresh_expires_at: datetime
+
+
+class LogoutResponse(BaseModel):
+    """The sign-out result; cookies are cleared even when no session matched."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    signed_out: bool = True
+
+
 class MeUser(BaseModel):
     """The caller's identity and membership fields exposed by ``GET /auth/me``."""
 
@@ -153,8 +180,11 @@ __all__ = [
     "LoginRequest",
     "LoginResponse",
     "LoginUser",
+    "LogoutResponse",
     "MeResponse",
     "MeUser",
+    "RefreshRequest",
+    "RefreshResponse",
     "RoleSummary",
     "tenant_profile",
 ]

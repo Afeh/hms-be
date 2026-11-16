@@ -7,7 +7,16 @@ from app.schemas.attachment import (
     DownloadUrlSchema,
     PresignedUploadSchema,
 )
-from app.schemas.auth import LoginRequest, LoginResponse, LoginUser, MeResponse, MeUser
+from app.schemas.auth import (
+    LoginRequest,
+    LoginResponse,
+    LoginUser,
+    LogoutResponse,
+    MeResponse,
+    MeUser,
+    RefreshRequest,
+    RefreshResponse,
+)
 from app.schemas.base import BaseSchema, StrictBaseModel
 from app.schemas.envelope import ErrorDetail, error_envelope, success_envelope
 from app.schemas.identity import IdentityResponse, NameSchema
@@ -48,6 +57,7 @@ __all__ = [
     "LoginRequest",
     "LoginResponse",
     "LoginUser",
+    "LogoutResponse",
     "MeResponse",
     "MeUser",
     "NameSchema",
@@ -57,6 +67,8 @@ __all__ = [
     "PatientResponse",
     "PatientUpdate",
     "PresignedUploadSchema",
+    "RefreshRequest",
+    "RefreshResponse",
     "RoleResponse",
     "SessionResponse",
     "StrictBaseModel",
