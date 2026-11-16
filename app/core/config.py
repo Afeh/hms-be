@@ -52,6 +52,18 @@ class Settings(BaseSettings):
     mfa_secret_key: str = "dev-only-insecure-mfa-key-change-me-0001"  # noqa: S105
     mfa_challenge_ttl_seconds: int = 300
 
+    # Browser session cookies. Tokens are also returned in the login body for
+    # non-browser clients. Secure defaults to off locally and on everywhere else.
+    auth_cookie_secure: bool | None = None
+    auth_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
+    auth_cookie_domain: str | None = None
+
+    @property
+    def secure_auth_cookies(self) -> bool:
+        if self.auth_cookie_secure is not None:
+            return self.auth_cookie_secure
+        return self.environment != "local"
+
     # HTTP hardening and rate limits (plan section 12, issue 0006)
     max_request_body_bytes: int = 1_048_576  # 1 MiB for JSON payloads
     rate_limit_window_seconds: int = 60
@@ -100,6 +112,13 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
+
+    @model_validator(mode="after")
+    def _validate_cookie_settings(self) -> Settings:
+        """Reject a SameSite=None cookie that browsers would discard without HTTPS."""
+        if self.auth_cookie_samesite == "none" and not self.secure_auth_cookies:
+            raise ValueError("AUTH_COOKIE_SAMESITE=none requires secure auth cookies")
+        return self
 
     @model_validator(mode="after")
     def _require_production_secrets(self) -> Settings:
