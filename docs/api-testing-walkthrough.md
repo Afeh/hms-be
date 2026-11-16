@@ -358,50 +358,38 @@ refreshing download URLs need `document:read`. The visit must be open.
 
 ### `POST /api/v1/visits/{visit_id}/attachments`
 
-```json
-{
-  "filename": "wound-left-arm.jpg",
-  "content_type": "image/jpeg",
-  "size_bytes": 2483921,
-  "caption": "Wound on left forearm"
-}
-```
+Multipart form fields:
 
-Copy `data.attachment._id` as `{attachment_id}` and the `upload` object. Then PUT
-the file directly to R2; do not send the bearer token to the presigned URL:
+| Field | Required | Notes |
+| :-- | :-- | :-- |
+| `file` | Yes | JPEG, PNG, WebP or HEIC image |
+| `caption` | No | Up to 500 characters |
 
 ```bash
-curl -X PUT \
-  -H "Content-Type: image/jpeg" \
-  --upload-file ./wound-left-arm.jpg \
-  "<data.attachment.upload.url>"
+curl -X POST \
+  -H "Authorization: Bearer {access_token}" \
+  -F "file=@./wound-left-arm.jpg;type=image/jpeg" \
+  -F "caption=Wound on left forearm" \
+  "http://127.0.0.1:8000/api/v1/visits/{visit_id}/attachments"
 ```
 
-The URL and content type must match the values from the create response. The URL
-expires after five minutes by default.
-
-### `POST /api/v1/visits/{visit_id}/attachments/{attachment_id}/complete`
-
-No body. The API checks that the R2 object exists and that its size and content
-type match the declaration. On success the attachment becomes `uploaded` and the
-response includes `download_url`.
-
-If nothing was uploaded, this returns `409 object_not_found`. A size mismatch
-returns `422 size_mismatch` and removes the rejected pending record.
+The API stores the image in private R2, creates the attachment record and returns
+it as `uploaded` with a fresh `download_url`. Copy `data.attachment._id` as
+`{attachment_id}`. There is no separate upload-URL or completion call.
 
 ### `GET /api/v1/visits/{visit_id}/attachments`
 
-Optional `limit` (1–100) and `cursor` query parameters. Each pending attachment
-includes a fresh `upload` URL; each uploaded attachment includes a fresh
-`download_url`.
+Optional `limit` (1–100) and `cursor` query parameters. Each image includes a
+fresh short-lived `download_url`.
 
 ### `GET /api/v1/visits/{visit_id}/attachments/{attachment_id}/url`
 
-No body. Returns a fresh short-lived download URL for an uploaded attachment.
+No body. Returns a fresh short-lived download URL for an uploaded image.
 
 Allowed image types are `image/jpeg`, `image/png`, `image/webp` and `image/heic`;
-the default size limit is 10 MiB. An unsupported type returns `415`
-`unsupported_media_type`; an oversized declaration returns `413 image_too_large`.
+the default size limit is 10 MiB. An unsupported type returns
+`415 unsupported_media_type`; an oversized file returns `413 image_too_large`; an
+empty file returns `422 empty_image`.
 
 ---
 
@@ -428,12 +416,11 @@ the default size limit is 10 MiB. An unsupported type returns `415`
 | 17 | `POST /api/v1/visits/{visit_id}/close` | `{"force": false}` + `If-Match` |
 | 18 | `POST /api/v1/visits/{visit_id}/vitals` | Vitals body |
 | 19 | `PATCH /api/v1/vitals/{vitals_id}` | Entered-in-error body |
-| 20 | `POST /api/v1/visits/{visit_id}/attachments` | Image declaration body |
-| 21 | `POST /api/v1/visits/{visit_id}/attachments/{attachment_id}/complete` | — |
-| 22 | `GET /api/v1/visits/{visit_id}/attachments` | — |
-| 23 | `GET /api/v1/visits/{visit_id}/attachments/{attachment_id}/url` | — |
-| 24 | `POST /api/v1/auth/refresh` | Optional refresh-token body |
-| 25 | `POST /api/v1/auth/logout` | — |
+| 20 | `POST /api/v1/visits/{visit_id}/attachments` | Multipart `file` + optional `caption` |
+| 21 | `GET /api/v1/visits/{visit_id}/attachments` | — |
+| 22 | `GET /api/v1/visits/{visit_id}/attachments/{attachment_id}/url` | — |
+| 23 | `POST /api/v1/auth/refresh` | Optional refresh-token body |
+| 24 | `POST /api/v1/auth/logout` | — |
 
 ## Common test order
 
@@ -444,7 +431,7 @@ the default size limit is 10 MiB. An unsupported type returns `415`
 5. Create a visit with the admin user ID.
 6. Record normal vitals, then list them.
 7. Fetch the visit and confirm the vitals are nested.
-8. Optionally attach an image: create the upload URL, PUT the file to R2, then complete it.
+8. Optionally attach an image by uploading the file through the API.
 9. Optionally mark a vitals row entered in error.
 10. Patch the patient and visit with their current ETags.
 11. Close the visit with its current ETag.
