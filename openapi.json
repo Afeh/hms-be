@@ -73,6 +73,208 @@
         "title": "AiConfigResponse",
         "type": "object"
       },
+      "AttachmentCreate": {
+        "additionalProperties": false,
+        "description": "Ask the API for a direct-upload URL for one image.",
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "content_type": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Content Type",
+            "type": "string"
+          },
+          "filename": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Filename",
+            "type": "string"
+          },
+          "size_bytes": {
+            "exclusiveMinimum": 0.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "filename",
+          "content_type",
+          "size_bytes"
+        ],
+        "title": "AttachmentCreate",
+        "type": "object"
+      },
+      "AttachmentListResponse": {
+        "description": "One cursor page of images attached to a visit.",
+        "properties": {
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/AttachmentResponse"
+            },
+            "title": "Attachments",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "attachments"
+        ],
+        "title": "AttachmentListResponse",
+        "type": "object"
+      },
+      "AttachmentResponse": {
+        "description": "One visit image, including a usable URL for the current state.",
+        "properties": {
+          "_id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "caption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "download_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Expires At"
+          },
+          "download_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Url"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "patient_id": {
+            "title": "Patient Id",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "uploaded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "upload": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PresignedUploadSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "uploaded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uploaded At"
+          },
+          "uploaded_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uploaded By"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "visit_id": {
+            "title": "Visit Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "_id",
+          "visit_id",
+          "patient_id",
+          "filename",
+          "content_type",
+          "size_bytes",
+          "status",
+          "version"
+        ],
+        "title": "AttachmentResponse",
+        "type": "object"
+      },
       "BrandingConfigResponse": {
         "description": "Branding overrides.",
         "properties": {
@@ -200,6 +402,26 @@
           "redis"
         ],
         "title": "Dependencies",
+        "type": "object"
+      },
+      "DownloadUrlSchema": {
+        "description": "A fresh short-lived direct-download URL.",
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "expires_at"
+        ],
+        "title": "DownloadUrlSchema",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -1249,6 +1471,40 @@
           }
         },
         "title": "PayerSchema",
+        "type": "object"
+      },
+      "PresignedUploadSchema": {
+        "description": "Everything the client needs to PUT the image directly to R2.",
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Headers",
+            "type": "object"
+          },
+          "method": {
+            "const": "PUT",
+            "default": "PUT",
+            "title": "Method",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "headers",
+          "expires_at"
+        ],
+        "title": "PresignedUploadSchema",
         "type": "object"
       },
       "ReadyHealth": {
@@ -3135,6 +3391,244 @@
         "summary": "Patch Visit",
         "tags": [
           "visits"
+        ]
+      }
+    },
+    "/api/v1/visits/{visit_id}/attachments": {
+      "get": {
+        "description": "List a visit's images oldest first, each with a usable URL.",
+        "operationId": "get_visit_attachments_api_v1_visits__visit_id__attachments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "visit_id",
+            "required": true,
+            "schema": {
+              "title": "Visit Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Visit Attachments",
+        "tags": [
+          "visit attachments"
+        ]
+      },
+      "post": {
+        "description": "Create a pending attachment and return its short-lived R2 upload URL.",
+        "operationId": "create_visit_attachment_api_v1_visits__visit_id__attachments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "visit_id",
+            "required": true,
+            "schema": {
+              "title": "Visit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/AttachmentResponse"
+                  },
+                  "title": "Response Create Visit Attachment Api V1 Visits  Visit Id  Attachments Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Visit Attachment",
+        "tags": [
+          "visit attachments"
+        ]
+      }
+    },
+    "/api/v1/visits/{visit_id}/attachments/{attachment_id}/complete": {
+      "post": {
+        "description": "Verify the uploaded object and mark the attachment as readable.",
+        "operationId": "complete_visit_attachment_api_v1_visits__visit_id__attachments__attachment_id__complete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "visit_id",
+            "required": true,
+            "schema": {
+              "title": "Visit Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/AttachmentResponse"
+                  },
+                  "title": "Response Complete Visit Attachment Api V1 Visits  Visit Id  Attachments  Attachment Id  Complete Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Complete Visit Attachment",
+        "tags": [
+          "visit attachments"
+        ]
+      }
+    },
+    "/api/v1/visits/{visit_id}/attachments/{attachment_id}/url": {
+      "get": {
+        "description": "Return a fresh short-lived download URL for a completed upload.",
+        "operationId": "get_visit_attachment_url_api_v1_visits__visit_id__attachments__attachment_id__url_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "visit_id",
+            "required": true,
+            "schema": {
+              "title": "Visit Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/DownloadUrlSchema"
+                  },
+                  "title": "Response Get Visit Attachment Url Api V1 Visits  Visit Id  Attachments  Attachment Id  Url Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Visit Attachment Url",
+        "tags": [
+          "visit attachments"
         ]
       }
     },
