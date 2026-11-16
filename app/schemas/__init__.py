@@ -16,6 +16,19 @@ from app.schemas.session import SessionResponse
 from app.schemas.tenant import TenantProfileResponse
 from app.schemas.tenant_config import TenantConfigPatch, TenantConfigResponse
 from app.schemas.user import UserResponse
+from app.schemas.visit import (
+    VisitClose,
+    VisitCreate,
+    VisitListResponse,
+    VisitResponse,
+    VisitUpdate,
+)
+from app.schemas.vitals import (
+    VitalsCreate,
+    VitalsEnteredInError,
+    VitalsListResponse,
+    VitalsResponse,
+)
 
 __all__ = [
     "BaseSchema",
@@ -39,6 +52,15 @@ __all__ = [
     "TenantConfigResponse",
     "TenantProfileResponse",
     "UserResponse",
+    "VisitClose",
+    "VisitCreate",
+    "VisitListResponse",
+    "VisitResponse",
+    "VisitUpdate",
+    "VitalsCreate",
+    "VitalsEnteredInError",
+    "VitalsListResponse",
+    "VitalsResponse",
     "error_envelope",
     "success_envelope",
 ]

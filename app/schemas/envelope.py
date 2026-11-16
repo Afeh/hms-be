@@ -6,7 +6,7 @@ status, `message` is safe to show in the interface, and `data` is always an obje
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from pydantic import BaseModel
@@ -41,8 +41,9 @@ def error_envelope(
     *,
     errors: Sequence[ErrorDetail] | None = None,
     request_id: str | None = None,
+    extra_data: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    data: dict[str, Any] = {"code": code}
+    data: dict[str, Any] = {**(extra_data or {}), "code": code}
     if errors:
         data["errors"] = [detail.model_dump() for detail in errors]
     ctx = current_context()
