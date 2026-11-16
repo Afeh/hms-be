@@ -20,9 +20,11 @@ from app.models.tenant import Tenant
 from app.models.tenant_config import TenantConfig
 from app.models.user import ProfessionalProfile, User
 from app.models.visit import Visit
+from app.models.visit_attachment import AttachmentStatus, VisitAttachment
 from app.models.vital_signs import VitalSigns, VitalWarning
 
 __all__ = [
+    "AttachmentStatus",
     "Counter",
     "Identity",
     "MfaState",
@@ -41,6 +43,7 @@ __all__ = [
     "TenantConfig",
     "User",
     "Visit",
+    "VisitAttachment",
     "VitalSigns",
     "VitalWarning",
 ]
