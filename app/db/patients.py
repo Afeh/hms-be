@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from bson import ObjectId
@@ -25,6 +25,20 @@ class PatientRepository(TenantRepository[Patient]):
 
     async def find_by_number(self, patient_number: str) -> Patient | None:
         return await self.find_one({"patient_number": patient_number})
+
+    async def record_visit(self, patient_id: str, visited_at: datetime) -> None:
+        """Advance ``last_visit_date`` without bumping the demographic version."""
+        try:
+            object_id = ObjectId(patient_id)
+        except (InvalidId, TypeError):
+            return
+        await self._collection.update_one(
+            {"_id": object_id, "deleted_at": None},
+            {
+                "$max": {"last_visit_date": visited_at},
+                "$set": {"updated_at": datetime.now(UTC)},
+            },
+        )
 
     async def list_patients(
         self,

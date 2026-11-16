@@ -22,6 +22,8 @@ from app.db.tenancy import (
 from app.db.tenant_configs import TENANT_CONFIGS_COLLECTION, TenantConfigStore
 from app.db.tenants import TENANTS_COLLECTION, TenantStore
 from app.db.users import MembershipStore, UserRepository
+from app.db.visits import VISITS_COLLECTION, VisitRepository
+from app.db.vital_signs import VITAL_SIGNS_COLLECTION, VitalSignsRepository
 
 __all__ = [
     "COUNTERS_COLLECTION",
@@ -30,6 +32,8 @@ __all__ = [
     "TENANTS_COLLECTION",
     "TENANT_CONFIGS_COLLECTION",
     "TENANT_EXEMPT_COLLECTIONS",
+    "VISITS_COLLECTION",
+    "VITAL_SIGNS_COLLECTION",
     "DuplicateEntityError",
     "IdentityRepository",
     "MembershipStore",
@@ -51,6 +55,8 @@ __all__ = [
     "TenantStore",
     "UserRepository",
     "VersionConflictError",
+    "VisitRepository",
+    "VitalSignsRepository",
     "create_redis",
     "next_value",
     "normalize_email",

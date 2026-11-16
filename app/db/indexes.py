@@ -19,6 +19,8 @@ SESSIONS_COLLECTION = "sessions"
 REFRESH_TOKENS_COLLECTION = "refresh_tokens"
 PATIENTS_COLLECTION = "patients"
 COUNTERS_COLLECTION = "counters"
+VISITS_COLLECTION = "visits"
+VITAL_SIGNS_COLLECTION = "vital_signs"
 
 
 @dataclass(frozen=True, slots=True)
@@ -141,6 +143,30 @@ PATIENT_INDEXES: tuple[IndexSpec, ...] = (
 )
 
 
+VISIT_INDEXES: tuple[IndexSpec, ...] = (
+    IndexSpec(
+        collection=VISITS_COLLECTION,
+        keys=(("tenant_id", ASCENDING), ("patient_id", ASCENDING), ("status", ASCENDING)),
+        name="ix_visits_tenant_patient_status",
+    ),
+    IndexSpec(
+        collection=VISITS_COLLECTION,
+        keys=(("tenant_id", ASCENDING), ("patient_id", ASCENDING), ("visit_date", DESCENDING)),
+        name="ix_visits_tenant_patient_date",
+    ),
+    IndexSpec(
+        collection=VITAL_SIGNS_COLLECTION,
+        keys=(("tenant_id", ASCENDING), ("visit_id", ASCENDING)),
+        name="ix_vital_signs_tenant_visit",
+    ),
+    IndexSpec(
+        collection=VITAL_SIGNS_COLLECTION,
+        keys=(("tenant_id", ASCENDING), ("patient_id", ASCENDING), ("measured_at", DESCENDING)),
+        name="ix_vital_signs_tenant_patient_measured",
+    ),
+)
+
+
 def create_indexes_sync(db: Any) -> None:
     """Apply every identity/access spec to a PyMongo database (migration 0005)."""
     for spec in IDENTITY_ACCESS_INDEXES:
@@ -165,9 +191,21 @@ async def create_patient_indexes(db: Any) -> None:
         await db[spec.collection].create_index(list(spec.keys), **spec.options())
 
 
+def create_visit_indexes_sync(db: Any) -> None:
+    """Apply visit and vital-sign indexes to a PyMongo database (migration 0007)."""
+    for spec in VISIT_INDEXES:
+        db[spec.collection].create_index(list(spec.keys), **spec.options())
+
+
+async def create_visit_indexes(db: Any) -> None:
+    """Apply visit and vital-sign indexes to a Motor database (integration tests)."""
+    for spec in VISIT_INDEXES:
+        await db[spec.collection].create_index(list(spec.keys), **spec.options())
+
+
 def index_for(collection: str, name: str) -> IndexSpec:
     """Look up a spec by collection and index name, for tests."""
-    for spec in (*IDENTITY_ACCESS_INDEXES, *PATIENT_INDEXES):
+    for spec in (*IDENTITY_ACCESS_INDEXES, *PATIENT_INDEXES, *VISIT_INDEXES):
         if spec.collection == collection and spec.name == name:
             return spec
     raise KeyError(f"no index {name!r} on {collection!r}")
@@ -183,10 +221,15 @@ __all__ = [
     "ROLES_COLLECTION",
     "SESSIONS_COLLECTION",
     "USERS_COLLECTION",
+    "VISITS_COLLECTION",
+    "VISIT_INDEXES",
+    "VITAL_SIGNS_COLLECTION",
     "IndexSpec",
     "create_indexes",
     "create_indexes_sync",
     "create_patient_indexes",
     "create_patient_indexes_sync",
+    "create_visit_indexes",
+    "create_visit_indexes_sync",
     "index_for",
 ]
