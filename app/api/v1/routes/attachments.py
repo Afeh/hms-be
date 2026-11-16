@@ -1,10 +1,10 @@
-"""Image attachments on visits, uploaded directly to Cloudflare R2."""
+"""Image attachments on visits, uploaded through the API to Cloudflare R2."""
 
 from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import Depends, Query
+from fastapi import Depends, File, Form, Query, UploadFile
 
 from app.api.deps import get_app_settings, get_registry, get_storage, require_permission
 from app.api.routing import ApiRouter, response_message
@@ -12,18 +12,8 @@ from app.core.config import Settings
 from app.core.context import get_context
 from app.core.errors import ApiError
 from app.db import TenantConnectionRegistry
-from app.schemas.attachment import (
-    AttachmentCreate,
-    AttachmentListResponse,
-    AttachmentResponse,
-    DownloadUrlSchema,
-)
-from app.services.attachments import (
-    attachment_download,
-    complete_attachment,
-    create_attachment,
-    list_attachments,
-)
+from app.schemas.attachment import AttachmentListResponse, AttachmentResponse, DownloadUrlSchema
+from app.services.attachments import attachment_download, list_attachments, upload_attachment
 from app.services.storage import Storage
 
 router = ApiRouter(tags=["visit attachments"])
@@ -36,51 +26,49 @@ def _require_tenant_id() -> str:
     return tenant_id
 
 
+async def _read_image(file: UploadFile, max_bytes: int) -> bytes:
+    """Read at most one byte over the limit so oversized files fail fast."""
+    try:
+        data = await file.read(max_bytes + 1)
+    finally:
+        await file.close()
+    if len(data) > max_bytes:
+        raise ApiError(
+            413,
+            "image_too_large",
+            "The image exceeds the configured size limit",
+            data={"max_bytes": max_bytes},
+        )
+    return data
+
+
 @router.post(
     "/visits/{visit_id}/attachments",
     status_code=201,
     dependencies=[Depends(require_permission("document:capture"))],
 )
-@response_message("Image upload URL generated successfully")
-async def create_visit_attachment(
+@response_message("Image uploaded successfully")
+async def upload_visit_attachment(
     visit_id: str,
-    body: AttachmentCreate,
+    file: Annotated[UploadFile, File(description="Image file to attach to the visit")],
     registry: Annotated[TenantConnectionRegistry, Depends(get_registry)],
     storage: Annotated[Storage, Depends(get_storage)],
     settings: Annotated[Settings, Depends(get_app_settings)],
+    caption: Annotated[str | None, Form(max_length=500)] = None,
 ) -> dict[str, AttachmentResponse]:
-    """Create a pending attachment and return its short-lived R2 upload URL."""
+    """Upload an image through the API and attach it to an open visit."""
     tenant_id = _require_tenant_id()
-    attachment = await create_attachment(
+    data = await _read_image(file, settings.storage_max_image_bytes)
+    attachment = await upload_attachment(
         registry,
         tenant_id,
         visit_id,
-        body,
-        storage,
+        filename=file.filename,
+        content_type=file.content_type,
+        data=data,
+        caption=caption,
+        storage=storage,
         max_image_bytes=settings.storage_max_image_bytes,
-    )
-    return {"attachment": attachment}
-
-
-@router.post(
-    "/visits/{visit_id}/attachments/{attachment_id}/complete",
-    dependencies=[Depends(require_permission("document:capture"))],
-)
-@response_message("Image attached successfully")
-async def complete_visit_attachment(
-    visit_id: str,
-    attachment_id: str,
-    registry: Annotated[TenantConnectionRegistry, Depends(get_registry)],
-    storage: Annotated[Storage, Depends(get_storage)],
-) -> dict[str, AttachmentResponse]:
-    """Verify the uploaded object and mark the attachment as readable."""
-    tenant_id = _require_tenant_id()
-    attachment = await complete_attachment(
-        registry,
-        tenant_id,
-        visit_id,
-        attachment_id,
-        storage,
     )
     return {"attachment": attachment}
 
@@ -121,7 +109,7 @@ async def get_visit_attachment_url(
     registry: Annotated[TenantConnectionRegistry, Depends(get_registry)],
     storage: Annotated[Storage, Depends(get_storage)],
 ) -> dict[str, DownloadUrlSchema]:
-    """Return a fresh short-lived download URL for a completed upload."""
+    """Return a fresh short-lived download URL for an uploaded image."""
     tenant_id = _require_tenant_id()
     download = await attachment_download(
         registry,
