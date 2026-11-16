@@ -58,12 +58,16 @@ class EnvelopeRoute(APIRoute):
                 message=self.message or default_message(response.status_code),
                 status_code=response.status_code,
             )
-            headers = {
-                key: value
-                for key, value in response.headers.items()
-                if key.lower() not in {"content-length", "content-type"}
-            }
-            return JSONResponse(wrapped, status_code=response.status_code, headers=headers)
+            # Keep raw headers: two Set-Cookie values must remain two headers,
+            # which a dict would collapse into one.
+            preserved = [
+                (name, value)
+                for name, value in response.raw_headers
+                if name.lower() not in {b"content-length", b"content-type"}
+            ]
+            wrapped_response = JSONResponse(wrapped, status_code=response.status_code)
+            wrapped_response.raw_headers.extend(preserved)
+            return wrapped_response
 
         return envelope_handler
 
