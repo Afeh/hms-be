@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,6 +40,18 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = Field(default_factory=list)
 
+    # Authentication (plan section 5.1, issues 0013/0017). The default is local
+    # development only; staging and production must supply a long random secret.
+    jwt_secret: str = "dev-only-insecure-jwt-secret-change-me-0001"  # noqa: S105
+    jwt_issuer: str = "hms"
+    jwt_audience: str = "hms-api"
+    access_token_ttl_seconds: int = 600
+    refresh_token_ttl_seconds: int = 30 * 24 * 60 * 60
+    session_idle_timeout_seconds: int = 30 * 60
+    session_absolute_timeout_seconds: int = 8 * 60 * 60
+    mfa_secret_key: str = "dev-only-insecure-mfa-key-change-me-0001"  # noqa: S105
+    mfa_challenge_ttl_seconds: int = 300
+
     # HTTP hardening and rate limits (plan section 12, issue 0006)
     max_request_body_bytes: int = 1_048_576  # 1 MiB for JSON payloads
     rate_limit_window_seconds: int = 60
@@ -67,6 +79,17 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
+
+    @model_validator(mode="after")
+    def _require_production_secrets(self) -> Settings:
+        """Refuse to start non-locally with the development signing keys."""
+        if self.environment == "local":
+            return self
+        secrets = {"JWT_SECRET": self.jwt_secret, "MFA_SECRET_KEY": self.mfa_secret_key}
+        for name, value in secrets.items():
+            if len(value) < 32 or "insecure" in value or "change-me" in value:
+                raise ValueError(f"{name} must be a random value of at least 32 characters")
+        return self
 
 
 @lru_cache

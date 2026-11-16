@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping, Sequence
+from typing import Any
 
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -68,6 +69,7 @@ class ApiError(Exception):
         *,
         errors: Sequence[ErrorDetail] | None = None,
         headers: Mapping[str, str] | None = None,
+        data: Mapping[str, Any] | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
@@ -75,6 +77,7 @@ class ApiError(Exception):
         self.message = message
         self.errors = list(errors) if errors else None
         self.headers = dict(headers) if headers else None
+        self.data = dict(data) if data else None
 
 
 def _render(error: ApiError) -> JSONResponse:
@@ -84,6 +87,7 @@ def _render(error: ApiError) -> JSONResponse:
             error.code,
             error.message,
             errors=error.errors,
+            extra_data=error.data,
         ),
         status_code=error.status_code,
         headers=error.headers,

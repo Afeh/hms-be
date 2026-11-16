@@ -9,11 +9,15 @@ description = "HMS backend: FastAPI modular monolith (API and Celery worker) on 
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "argon2-cffi>=25.1.0",
     "celery[redis]>=5.7.0",
+    "cryptography>=44.0.0",
+    "email-validator>=2.2.0",
     "fastapi>=0.162.2",
     "motor>=3.7.1",
     "pydantic>=2.14.3",
     "pydantic-settings>=2.16.2",
+    "pyjwt>=2.10.1",
     "redis>=8.1.0",
     "uvicorn[standard]>=0.54.0",
 ]

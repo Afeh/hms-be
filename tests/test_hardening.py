@@ -37,6 +37,8 @@ def _make_settings(**overrides: Any) -> Settings:
         "mongodb_uri": "mongodb://127.0.0.1:1",
         "mongodb_server_selection_timeout_ms": 250,
         "redis_url": "redis://127.0.0.1:1/0",
+        "jwt_secret": "test-jwt-secret-0123456789abcdef0123456789",
+        "mfa_secret_key": "test-mfa-secret-0123456789abcdef0123456789",
     }
     base.update(overrides)
     return Settings(**base)
@@ -150,10 +152,21 @@ def test_dotted_key_raises_query_sanitization_error() -> None:
         sanitize_query({"a.b": "value"})
 
 
-def test_nested_dollar_key_raises_query_sanitization_error() -> None:
-    """Nested $-prefixed keys must also be rejected."""
+def test_nested_dangerous_operator_raises_query_sanitization_error() -> None:
+    """Nested operators outside the comparison allow-list are rejected."""
     with pytest.raises(QuerySanitizationError):
-        sanitize_query({"outer": {"$gt": 0}})
+        sanitize_query({"outer": {"$where": "1==1"}})
+
+
+def test_nested_comparison_operator_is_allowed() -> None:
+    """Typed date/number ranges may use the comparison operators."""
+    assert sanitize_query({"quantity": {"$gte": 2}}) == {"quantity": {"$gte": 2}}
+
+
+def test_top_level_comparison_operator_is_rejected() -> None:
+    """Operators are only valid inside a field filter."""
+    with pytest.raises(QuerySanitizationError):
+        sanitize_query({"$gte": 2})
 
 
 def test_clean_query_passes_sanitize_query() -> None:
