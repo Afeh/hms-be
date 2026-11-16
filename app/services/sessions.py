@@ -207,6 +207,21 @@ async def revoke_session(
     return await SessionStore(registry).revoke(tenant_id, session_id, reason=reason, now=now)
 
 
+async def revoke_refresh_token(
+    registry: TenantConnectionRegistry,
+    raw_refresh_token: str,
+    *,
+    reason: RevokedReason = "logout",
+    now: datetime | None = None,
+) -> bool:
+    """Revoke the session owning a refresh token; useful when the access token expired."""
+    store = SessionStore(registry)
+    presented = await store.find_refresh_token(hash_opaque_token(raw_refresh_token))
+    if presented is None:
+        return False
+    return await store.revoke(presented.tenant_id, presented.session_id, reason=reason, now=now)
+
+
 async def revoke_all_for_identity(
     registry: TenantConnectionRegistry,
     identity_id: str,
@@ -236,6 +251,7 @@ __all__ = [
     "IssuedSession",
     "create_session",
     "revoke_all_for_identity",
+    "revoke_refresh_token",
     "revoke_session",
     "rotate_refresh_token",
     "touch_session_if_stale",
