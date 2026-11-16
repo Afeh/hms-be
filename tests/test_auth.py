@@ -15,6 +15,7 @@ from bson import ObjectId
 from httpx import ASGITransport, AsyncClient
 
 from app.core import Settings
+from app.core.cookies import ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE
 from app.core.security import hash_password
 from app.db import TenantConnectionRegistry
 from app.db.identities import IdentityRepository, normalize_email
@@ -175,6 +176,106 @@ async def test_login_returns_tokens_and_me_returns_permissions(
         assert profile["roles"][0]["mfa_required"] is False
         assert profile["tenant"]["_id"] == account["tenant_id"]
         assert profile["perm_version"] == 1
+
+
+async def test_login_sets_http_only_cookies_and_cookie_authentication_works(
+    registry: TenantConnectionRegistry,
+) -> None:
+    account = await _account(registry)
+    async for client, _ in _run(registry):
+        login = await client.post(
+            "/api/v1/auth/login",
+            json={"email": account["email"], "password": PASSWORD},
+        )
+        assert login.status_code == 200, login.text
+
+        cookies = login.headers.get_list("set-cookie")
+        assert len(cookies) == 2
+        access_cookie = next(c for c in cookies if c.startswith(f"{ACCESS_TOKEN_COOKIE}="))
+        refresh_cookie = next(c for c in cookies if c.startswith(f"{REFRESH_TOKEN_COOKIE}="))
+        for cookie in (access_cookie, refresh_cookie):
+            lowered = cookie.lower()
+            assert "httponly" in lowered
+            assert "path=/" in lowered
+            assert "samesite=lax" in lowered
+        assert "max-age=600" in access_cookie.lower()
+        lowered_refresh = refresh_cookie.lower()
+        assert "expires=" in lowered_refresh
+        refresh_max_age = int(lowered_refresh.split("max-age=")[1].split(";")[0])
+        assert refresh_max_age > 600
+        assert client.cookies.get(ACCESS_TOKEN_COOKIE)
+        assert client.cookies.get(REFRESH_TOKEN_COOKIE)
+
+        me = await client.get("/api/v1/auth/me")
+        assert me.status_code == 200, me.text
+        assert me.json()["data"]["user"]["_id"] == account["user_id"]
+
+
+async def test_refresh_rotates_the_cookie_pair_and_rejects_the_old_token(
+    registry: TenantConnectionRegistry,
+) -> None:
+    account = await _account(registry)
+    async for client, _ in _run(registry):
+        login = await client.post(
+            "/api/v1/auth/login",
+            json={"email": account["email"], "password": PASSWORD},
+        )
+        assert login.status_code == 200, login.text
+        original = login.json()["data"]
+
+        refreshed = await client.post("/api/v1/auth/refresh")
+        assert refreshed.status_code == 200, refreshed.text
+        rotated = refreshed.json()["data"]
+        assert rotated["refresh_token"] != original["refresh_token"]
+        assert len(refreshed.headers.get_list("set-cookie")) == 2
+
+        me = await client.get("/api/v1/auth/me")
+        assert me.status_code == 200, me.text
+
+        replay = await client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": original["refresh_token"]},
+        )
+        assert replay.status_code == 401
+        assert replay.json()["data"]["code"] == "refresh_reuse_detected"
+
+        revoked = await client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {rotated['access_token']}"},
+        )
+        assert revoked.status_code == 401
+        assert revoked.json()["data"]["code"] == "session_expired"
+
+
+async def test_logout_revokes_the_session_and_clears_both_cookies(
+    registry: TenantConnectionRegistry,
+) -> None:
+    account = await _account(registry)
+    async for client, _ in _run(registry):
+        login = await client.post(
+            "/api/v1/auth/login",
+            json={"email": account["email"], "password": PASSWORD},
+        )
+        assert login.status_code == 200, login.text
+        access_token = login.json()["data"]["access_token"]
+
+        logout = await client.post("/api/v1/auth/logout")
+        assert logout.status_code == 200, logout.text
+        assert logout.json()["data"]["signed_out"] is True
+        cleared = logout.headers.get_list("set-cookie")
+        assert len(cleared) == 2
+        assert all("max-age=0" in cookie.lower() for cookie in cleared)
+        assert client.cookies.get(ACCESS_TOKEN_COOKIE) is None
+        assert client.cookies.get(REFRESH_TOKEN_COOKIE) is None
+
+        me = await client.get("/api/v1/auth/me")
+        assert me.status_code == 401
+        bearer = await client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        assert bearer.status_code == 401
+        assert bearer.json()["data"]["code"] == "session_expired"
 
 
 async def test_me_requires_authentication(
