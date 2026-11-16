@@ -93,6 +93,42 @@ the same pull request; a wrong migration is corrected by a new revision, not a
 rollback. Every migration runs inside `run_as_system`, and the applied revision
 and reason are logged and stored in the `_migrations` collection.
 
+## Visit images (Cloudflare R2)
+
+Visit images are uploaded directly from the client to a private R2 bucket. The API
+only stores metadata and signs short-lived URLs, so image bytes never pass through
+the API process.
+
+1. Create a private R2 bucket (for example `hms-documents`).
+2. Create an R2 API token with **Object Read & Write** for that bucket.
+3. Set the values in `.env`:
+
+```bash
+STORAGE_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+STORAGE_BUCKET=hms-documents
+STORAGE_ACCESS_KEY=<R2_ACCESS_KEY_ID>
+STORAGE_SECRET_KEY=<R2_SECRET_ACCESS_KEY>
+STORAGE_REGION=auto
+```
+
+If your browser uploads directly, add a CORS policy on the bucket that allows
+`PUT` and `GET` from the frontend origin and permits the `content-type` header.
+
+The upload flow is:
+
+1. `POST /api/v1/visits/{visit_id}/attachments` with the filename, MIME type and
+   byte size. The response contains a presigned `PUT` URL and required headers.
+2. `PUT` the image bytes to that URL.
+3. `POST /api/v1/visits/{visit_id}/attachments/{attachment_id}/complete`. The API
+   checks the object in R2 and marks the attachment `uploaded`.
+4. `GET /api/v1/visits/{visit_id}/attachments` lists images with short-lived
+   download URLs. Use `GET .../{attachment_id}/url` to refresh an expired one.
+
+Accepted types are JPEG, PNG, WebP and HEIC, up to 10 MiB by default. The tenant
+is part of every object key (`t/{tenant_id}/patients/...`) and the bucket must stay
+private. Uploading and reading require `document:capture` and `document:read`;
+images can only be added while the visit is open.
+
 ## Checks
 
 ```bash
