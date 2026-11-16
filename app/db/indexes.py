@@ -20,6 +20,7 @@ REFRESH_TOKENS_COLLECTION = "refresh_tokens"
 PATIENTS_COLLECTION = "patients"
 COUNTERS_COLLECTION = "counters"
 VISITS_COLLECTION = "visits"
+VISIT_ATTACHMENTS_COLLECTION = "visit_attachments"
 VITAL_SIGNS_COLLECTION = "vital_signs"
 
 
@@ -143,6 +144,21 @@ PATIENT_INDEXES: tuple[IndexSpec, ...] = (
 )
 
 
+VISIT_ATTACHMENT_INDEXES: tuple[IndexSpec, ...] = (
+    IndexSpec(
+        collection=VISIT_ATTACHMENTS_COLLECTION,
+        keys=(("tenant_id", ASCENDING), ("visit_id", ASCENDING), ("created_at", ASCENDING)),
+        name="ix_visit_attachments_tenant_visit_created",
+    ),
+    IndexSpec(
+        collection=VISIT_ATTACHMENTS_COLLECTION,
+        keys=(("tenant_id", ASCENDING), ("storage_key", ASCENDING)),
+        name="ix_visit_attachments_tenant_storage_key_unique",
+        unique=True,
+    ),
+)
+
+
 VISIT_INDEXES: tuple[IndexSpec, ...] = (
     IndexSpec(
         collection=VISITS_COLLECTION,
@@ -203,9 +219,26 @@ async def create_visit_indexes(db: Any) -> None:
         await db[spec.collection].create_index(list(spec.keys), **spec.options())
 
 
+def create_visit_attachment_indexes_sync(db: Any) -> None:
+    """Apply visit-attachment indexes to a PyMongo database (migration 0008)."""
+    for spec in VISIT_ATTACHMENT_INDEXES:
+        db[spec.collection].create_index(list(spec.keys), **spec.options())
+
+
+async def create_visit_attachment_indexes(db: Any) -> None:
+    """Apply visit-attachment indexes to a Motor database (integration tests)."""
+    for spec in VISIT_ATTACHMENT_INDEXES:
+        await db[spec.collection].create_index(list(spec.keys), **spec.options())
+
+
 def index_for(collection: str, name: str) -> IndexSpec:
     """Look up a spec by collection and index name, for tests."""
-    for spec in (*IDENTITY_ACCESS_INDEXES, *PATIENT_INDEXES, *VISIT_INDEXES):
+    for spec in (
+        *IDENTITY_ACCESS_INDEXES,
+        *PATIENT_INDEXES,
+        *VISIT_INDEXES,
+        *VISIT_ATTACHMENT_INDEXES,
+    ):
         if spec.collection == collection and spec.name == name:
             return spec
     raise KeyError(f"no index {name!r} on {collection!r}")
@@ -222,6 +255,8 @@ __all__ = [
     "SESSIONS_COLLECTION",
     "USERS_COLLECTION",
     "VISITS_COLLECTION",
+    "VISIT_ATTACHMENTS_COLLECTION",
+    "VISIT_ATTACHMENT_INDEXES",
     "VISIT_INDEXES",
     "VITAL_SIGNS_COLLECTION",
     "IndexSpec",
@@ -229,6 +264,8 @@ __all__ = [
     "create_indexes_sync",
     "create_patient_indexes",
     "create_patient_indexes_sync",
+    "create_visit_attachment_indexes",
+    "create_visit_attachment_indexes_sync",
     "create_visit_indexes",
     "create_visit_indexes_sync",
     "index_for",
