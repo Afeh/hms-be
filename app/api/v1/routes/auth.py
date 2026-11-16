@@ -1,4 +1,4 @@
-"""Authentication routes: login and the caller's profile (issues 0014/0016).
+"""Authentication routes: login, refresh, logout and the caller's profile.
 
 The sprint exposes login, refresh, logout and the caller's profile. MFA and
 lockout endpoints are deliberately deferred; login is still rate limited per IP.

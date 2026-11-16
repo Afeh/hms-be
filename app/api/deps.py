@@ -107,7 +107,7 @@ async def get_current_user(
     token: str = Depends(get_bearer_token),
     registry: TenantConnectionRegistry = Depends(get_registry),
 ) -> CurrentUser:
-    """Resolve a bearer token into identity, membership, session and permissions."""
+    """Resolve a header or cookie token into identity, membership and permissions."""
     settings: Settings = request.app.state.settings
     try:
         claims = decode_access_token(token, settings)
