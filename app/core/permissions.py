@@ -112,6 +112,8 @@ DEFAULT_ROLE_TEMPLATES: tuple[RoleTemplate, ...] = (
                 Permission.VISIT_UPDATE,
                 Permission.VISIT_CLOSE,
                 Permission.VITALS_WRITE,
+                Permission.DOCUMENT_CAPTURE,
+                Permission.DOCUMENT_READ,
                 Permission.USER_MANAGE,
                 Permission.ROLE_MANAGE,
                 Permission.TENANT_CONFIGURE,
